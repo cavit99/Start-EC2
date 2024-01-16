@@ -116,9 +116,23 @@ else
 fi
 
 # Connect to the instance
-if ssh sd -L 7860:localhost:7860; then
-    log "Successfully connected to the instance."
-else
-    log "Failed to connect to the instance."
-    exit 1
-fi
+counter=0
+while true; do
+    if ping -c 1 $ip_address &> /dev/null; then
+        if ssh sd -L 7860:localhost:7860; then
+            log "Successfully connected to the instance."
+            break
+        else
+            log "Failed to connect to the instance."
+            exit 1
+        fi
+    else
+        counter=$((counter+1))
+        if [ $counter -gt 3 ]; then
+            log "Failed to connect to the instance after 3 attempts. Please check your network and try again."
+            exit 1
+        fi
+        log "Ping unsuccessful. Waiting for 10 seconds before trying again."
+        sleep 10
+    fi
+done
