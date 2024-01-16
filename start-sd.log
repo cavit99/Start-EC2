@@ -1,0 +1,7 @@
+2024-01-16 11:35:10 Failed to connect to the instance.
+2024-01-16 11:35:25 An instance with SD tag is already running. Instance ID: i-08b5742af962fd603
+2024-01-16 11:35:26 SSH config file updated successfully.
+2024-01-16 11:35:37 Ping unsuccessful. Waiting for 20 seconds before trying again.
+2024-01-16 11:59:23 Failed to connect to the instance.
+2024-01-16 18:38:05 Failed to describe instances. Quitting
+2024-01-16 18:43:28 An instance with SD tag is already running. Instance ID: i-0610f97d8d97d879f
