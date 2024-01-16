@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Define a log file
-logfile="/var/log/my_script.log"
+logfile="start-sd.log"
 
 # Function to log messages
 log() {
