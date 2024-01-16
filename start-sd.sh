@@ -116,7 +116,7 @@ else
 fi
 
 # Connect to the instance
-if ssh sd; then
+if ssh sd -L 7860:localhost:7860; then
     log "Successfully connected to the instance."
 else
     log "Failed to connect to the instance."
