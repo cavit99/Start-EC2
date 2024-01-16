@@ -37,7 +37,7 @@ if [ -z "$ip_exists" ]; then
     fi
 
     # Add ICMP rule to the security group for IPv4
-    aws ec2 authorize-security-group-ingress --group-id sg-0a2f9548b660b5d0a --protocol icmp --icmp-type-code "echo-request" --cidr $local_ip/32 --region eu-north-1 > /dev/null 2>&1
+    aws ec2 authorize-security-group-ingress --group-id sg-0a2f9548b660b5d0a --region eu-north-1 --ip-permissions '[{"IpProtocol": "icmp", "FromPort": 8, "ToPort": -1, "IpRanges": [{"CidrIp": "'$local_ip'/32"}]}]' --debug > debug.log 2>&1  
     if [ $? -ne 0 ]; then
         log "Failed to add ICMP rule to security group."
         exit 1
@@ -62,7 +62,7 @@ EOF
 # Check if an instance with the tag 'sd' is already running
 existing_instance_id=$(aws ec2 describe-instances \
     --region eu-north-1 \
-    --filters "Name=tag:sd,Values=*" \
+    --filters "Name=tag:Name,Values=sd" \
     | jq -r '.Reservations[].Instances[] | select(.State.Name=="running") | .InstanceId' | head -n 1)
 
 if [ $? -ne 0 ]; then
@@ -71,7 +71,7 @@ if [ $? -ne 0 ]; then
 fi
 
 if [ -n "$existing_instance_id" ]; then
-    log "An instance from the launch template is already running. Instance ID: $existing_instance_id"
+    log "An instance with SD tag is already running. Instance ID: $existing_instance_id"
     instance_id=$existing_instance_id
     # Retrieve the public IP address of the existing instance
     ip_address=$(aws ec2 describe-instances \
