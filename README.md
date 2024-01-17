@@ -3,16 +3,6 @@
 
 This script is designed to start an Amazon EC2 instance based on a predefined launch template and establish a connection to it.
 
-## Table of Contents
-
-- [Getting Started](#getting-started)
-- [Prerequisites](#prerequisites)
-- [Installation](#installation)
-- [Usage](#usage)
-- [Contributing](#contributing)
-- [License](#license)
-- [Contact](#contact)
-
 ## Getting Started
 
 These instructions will guide you on how to use this script for starting and connecting to an EC2 instance.
@@ -29,19 +19,18 @@ Before you start, make sure you have:
 ## Installation
 
 1. Clone the repo
-   ```sh
-   git clone https://github.com/cavit99/Start-EC2.git
-   ```
+```sh
+git clone https://github.com/cavit99/Start-EC2.git
+```
 
 2. Install the required packages
-   ```sh
-   pip install -r requirements.txt
-   ```
+```sh
+pip install -r requirements.txt
+```
 
 ## Usage
 
 Run the script
-
 ```sh
 python start_ec2.py
 ```
@@ -67,5 +56,3 @@ Distributed under the MIT License. See LICENSE for more information.
 Cavit Erginsoy - cavit@erginsoy.com
 
 Project Link: https://github.com/cavit99/Start-EC2
-```
-
