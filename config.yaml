@@ -1,0 +1,5 @@
+template: 'lt-0e096fddfc03f20b6'
+remote_port: '8188'
+local_port: '8188'
+region: 'eu-north-1'
+tag_value: 'sd'
