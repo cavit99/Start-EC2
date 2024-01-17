@@ -7,6 +7,7 @@ import sys
 import requests
 import yaml
 import subprocess
+import shutil
 from botocore.exceptions import NoCredentialsError, ClientError
 
 # Set up logging
@@ -144,7 +145,7 @@ def start_instance_if_stopped(ec2_resource, ec2_client, instance_id: str) -> Non
                 logging.error(f"An error occurred while starting the instance: {e}")
                 sys.exit(1) 
 
-def start_ssm_session(ssm, instance_id: str) -> bool:
+def start_ssm_session(ssm, instance_id: str, awsregion: str) -> bool:
     logging.info(f"Starting a session with instance {instance_id}...")
     try:
         response = ssm.describe_instance_information(
@@ -155,17 +156,29 @@ def start_ssm_session(ssm, instance_id: str) -> bool:
             return False
         logging.info("SSM agent is correctly configured. Attempting to start session...")
         
+        # Check if AWS CLI is installed
+        if not shutil.which("aws"):
+            logging.error("AWS CLI is not installed or not found in PATH.")
+            return False
+
         # Use the AWS CLI 'aws ssm start-session' command to start an interactive shell session
-        # Make sure the AWS CLI is installed and configured with the necessary permissions
         start_session_command = [
             "aws", "ssm", "start-session",
             "--target", instance_id,
             "--region", awsregion
         ]
-        subprocess.run(start_session_command)
+        result = subprocess.run(start_session_command, capture_output=True, text=True)
+        
+        if result.returncode != 0:
+            logging.error(f"Failed to start SSM session: {result.stderr}")
+            return False
+        
         return True
     except ClientError as e:
         logging.error(f"ClientError occurred: {e}")
+        return False
+    except subprocess.CalledProcessError as e:
+        logging.error(f"An error occurred while starting the SSM session: {e}")
         return False
     except Exception as e:
         logging.error(f"An unexpected error occurred: {e}")
