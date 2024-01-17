@@ -57,8 +57,6 @@ def is_aws_configured() -> boto3.Session:
         return session
     except NoCredentialsError:
         return None
-
-
  
 def does_launch_template_exist(ec2, launch_template_id: str) -> bool:
     try:
@@ -103,8 +101,6 @@ def get_instance_id(ec2, name_tag: str) -> str:
     logging.info(f"No instances with tag value '{name_tag}' found.")
     return ""
 
-
-# Start the instance if it's not already running
 def start_instance_if_stopped(ec2, instance_id: str) -> None:
     instance = ec2.Instance(instance_id)
     if instance.state['Name'] != 'running':
@@ -126,8 +122,6 @@ def start_instance_if_stopped(ec2, instance_id: str) -> None:
             else:
                 logging.error(f"An error occurred while starting the instance: {e}")
                 sys.exit(1)  # Exit the script with an error code
-
-
 
 def start_ssm_session(ssm, instance_id: str) -> bool:
     logging.info(f"Starting a session with instance {instance_id}...")
