@@ -1,4 +1,4 @@
-markdown
+```markdown
 # EC2 Instance Starter
 
 This script is designed to start an Amazon EC2 instance based on a predefined launch template and establish a connection to it.
@@ -31,28 +31,41 @@ Before you start, make sure you have:
 1. Clone the repo
    ```sh
    git clone https://github.com/cavit99/Start-EC2.git
+   ```
 
-Install the required packages
-sh
-pip install -r requirements.txt
+2. Install the required packages
+   ```sh
+   pip install -r requirements.txt
+   ```
 
-Usage
+## Usage
+
 Run the script
-sh
+
+```sh
 python start_ec2.py
+```
 
 Follow the prompts to select your launch template and start the instance.
-Contributing
-Contributions are what make the open-source community such an amazing place to learn, inspire, and create. Any contributions you make are greatly appreciated.
-Fork the Project
-Create your Feature Branch (git checkout -b feature/AmazingFeature)
-Commit your Changes (git commit -m 'Add some AmazingFeature')
-Push to the Branch (git push origin feature/AmazingFeature)
-Open a Pull Request
-License
-Distributed under the MIT License. See LICENSE for more information.
-Contact
-Cavit Erginsoy cavit@erginsoy.com
-Project Link: https://github.com/cavit99/Start-EC2
 
-This README provides a clear and concise description of the project, including how to get started, prerequisites, installation instructions, usage, and how to contribute[1][3][5][7][9][10][11]. It also includes a license and contact information[5]. 
+## Contributing
+
+Contributions are what make the open-source community such an amazing place to learn, inspire, and create. Any contributions you make are greatly appreciated.
+
+1. Fork the Project
+2. Create your Feature Branch (git checkout -b feature/AmazingFeature)
+3. Commit your Changes (git commit -m 'Add some AmazingFeature')
+4. Push to the Branch (git push origin feature/AmazingFeature)
+5. Open a Pull Request
+
+## License
+
+Distributed under the MIT License. See LICENSE for more information.
+
+## Contact
+
+Cavit Erginsoy - cavit@erginsoy.com
+
+Project Link: https://github.com/cavit99/Start-EC2
+```
+
