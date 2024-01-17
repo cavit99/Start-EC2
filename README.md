@@ -1,4 +1,3 @@
-```markdown
 # EC2 Instance Starter
 
 This script is designed to start an Amazon EC2 instance based on a predefined launch template and establish a connection to it.
@@ -12,28 +11,31 @@ These instructions will guide you on how to use this script for starting and con
 Before you start, make sure you have:
 
 - An AWS account
-- AWS CLI installed and configured
-- Install AWS System Manager plug-in https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html
-- A predefined EC2 launch template
+- [AWS CLI installed and configured](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
+- [Install AWS System Manager plug-in](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html)
+- [A predefined EC2 launch template](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/create-launch-template.html)
+- An AMI you can use to launch, which already has SSM Agent
+- [Ensure your launch template will attach to the instance an IAM role with SSM permissions](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-getting-started-instance-profile.html)
+- Appropriate IAM permissions
+
 
 ## Installation
 
 1. Clone the repo
-```sh
-git clone https://github.com/cavit99/Start-EC2.git
-```
+``sh
+git clone https://github.com/cavit99/Start-EC2.git``
+
 
 2. Install the required packages
-```sh
-pip install -r requirements.txt
-```
+``sh
+pip install -r requirements.txt``
 
 ## Usage
 
 Run the script
-```sh
-python start_ec2.py
-```
+``sh
+python start_ec2.py``
+
 
 Follow the prompts to select your launch template and start the instance.
 
