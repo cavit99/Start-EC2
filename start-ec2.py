@@ -4,9 +4,7 @@
 
 import boto3
 import logging
-import os
 import sys
-import getpass
 import requests
 import yaml
 from botocore.exceptions import NoCredentialsError, ClientError
@@ -16,7 +14,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s %(message)s',
     handlers=[
-        logging.FileHandler('start-sd.log'),
+        logging.FileHandler('start-ec2.log'),
         logging.StreamHandler(sys.stdout)  # This will output to the console
     ]
 )

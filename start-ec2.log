@@ -1,0 +1,200 @@
+2024-01-16 11:35:10 Failed to connect to the instance.
+2024-01-16 11:35:25 An instance with SD tag is already running. Instance ID: i-08b5742af962fd603
+2024-01-16 11:35:26 SSH config file updated successfully.
+2024-01-16 11:35:37 Ping unsuccessful. Waiting for 20 seconds before trying again.
+2024-01-16 11:59:23 Failed to connect to the instance.
+2024-01-16 18:38:05 Failed to describe instances. Quitting
+2024-01-16 18:43:28 An instance with SD tag is already running. Instance ID: i-0610f97d8d97d879f
+2024-01-16 21:24:04 Waiting for the instance to be in a running state...
+2024-01-16 21:24:16 Instance is running.
+2024-01-16 21:24:17 Failed to start a session with the instance.
+2024-01-16 21:24:58 An instance with SD tag is already running. Instance ID: i-0345416ccca3d26d6
+2024-01-16 21:24:58 Failed to start a session with the instance.
+2024-01-16 21:25:15 An instance with SD tag is already running. Instance ID: i-0345416ccca3d26d6
+2024-01-16 21:26:26 Successfully started a session with the instance.
+2024-01-17 14:58:47,885 Found credentials in shared credentials file: ~/.aws/credentials
+2024-01-17 14:58:47,919 Found credentials in shared credentials file: ~/.aws/credentials
+2024-01-17 14:59:05,544 Instance i-0c9a6a95a7b7b1acd is running.
+2024-01-17 14:59:05,769 SSM agent is not correctly configured on the instance: i-0c9a6a95a7b7b1acd
+2024-01-17 14:59:05,769 Failed to start a session with the instance.
+2024-01-17 15:03:07,800 Found credentials in shared credentials file: ~/.aws/credentials
+2024-01-17 15:03:07,817 Found credentials in shared credentials file: ~/.aws/credentials
+2024-01-17 15:03:08,179 An instance with tag value 'sd' exists. Instance ID: i-0c9a6a95a7b7b1acd
+2024-01-17 15:03:08,495 SSM agent is not correctly configured on the instance: i-0c9a6a95a7b7b1acd
+2024-01-17 15:03:08,496 Failed to start a session with the instance.
+2024-01-17 15:13:40,123 Found credentials in shared credentials file: ~/.aws/credentials
+2024-01-17 15:13:40,123 AWS credentials are configured, proceeding.
+2024-01-17 15:13:40,139 Found credentials in shared credentials file: ~/.aws/credentials
+2024-01-17 15:13:40,725 An instance with tag value 'sd' exists. Instance ID: i-0c9a6a95a7b7b1acd
+2024-01-17 15:13:40,874 Starting a session with instance i-0c9a6a95a7b7b1acd...
+2024-01-17 15:13:41,233 SSM agent is not correctly configured on the instance: i-0c9a6a95a7b7b1acd
+2024-01-17 15:13:41,233 Failed to start a session with the instance.
+2024-01-17 15:50:43,353 Found credentials in shared credentials file: ~/.aws/credentials
+2024-01-17 15:50:43,353 AWS credentials are configured, proceeding.
+2024-01-17 15:50:43,368 Found credentials in shared credentials file: ~/.aws/credentials
+2024-01-17 15:50:43,946 An instance with tag value 'sd' exists. Instance ID: i-0c9a6a95a7b7b1acd
+2024-01-17 15:50:44,184 Starting instance i-0c9a6a95a7b7b1acd...
+2024-01-17 15:56:13,732 Found credentials in shared credentials file: ~/.aws/credentials
+2024-01-17 15:56:13,732 AWS credentials are configured, proceeding.
+2024-01-17 15:56:13,747 Found credentials in shared credentials file: ~/.aws/credentials
+2024-01-17 15:56:14,300 An instance with tag value 'sd' exists. Instance ID: i-0c9a6a95a7b7b1acd
+2024-01-17 15:56:14,610 Starting instance i-0c9a6a95a7b7b1acd...
+2024-01-17 16:03:58,484 Found credentials in shared credentials file: ~/.aws/credentials
+2024-01-17 16:03:58,484 AWS credentials are configured, proceeding.
+2024-01-17 16:03:58,500 Found credentials in shared credentials file: ~/.aws/credentials
+2024-01-17 16:03:59,122 An instance with tag value 'sd' exists. Instance ID: i-0c9a6a95a7b7b1acd
+2024-01-17 16:03:59,263 Starting instance i-0c9a6a95a7b7b1acd...
+2024-01-17 16:12:16,238 Found credentials in shared credentials file: ~/.aws/credentials
+2024-01-17 16:12:16,239 AWS credentials are configured, proceeding.
+2024-01-17 16:12:16,256 Found credentials in shared credentials file: ~/.aws/credentials
+2024-01-17 16:12:16,803 Creating a new instance...
+2024-01-17 16:12:18,404 Waiting for instance i-0a92672abf91b8a1c to start...
+2024-01-17 16:12:34,122 Instance i-0a92672abf91b8a1c is now running.
+2024-01-17 16:12:34,122 Instance i-0a92672abf91b8a1c is running.
+2024-01-17 16:12:34,122 Starting a session with instance i-0a92672abf91b8a1c...
+2024-01-17 16:12:34,485 SSM agent is not correctly configured on the instance: i-0a92672abf91b8a1c
+2024-01-17 16:12:34,485 Failed to start a session with the instance.
+2024-01-17 16:21:54,171 Using Launch Template ID: amegh
+2024-01-17 16:21:54,172 Using Remote Port Number: 8188
+2024-01-17 16:21:54,172 Using Local Port Number: 8188
+2024-01-17 16:21:54,172 Using AWS region: eu-north-1
+2024-01-17 16:21:54,172 Using AWS tag value: sd
+2024-01-17 16:21:54,512 Found credentials in shared credentials file: ~/.aws/credentials
+2024-01-17 16:21:54,512 AWS credentials are configured, proceeding.
+2024-01-17 16:21:54,553 Found credentials in shared credentials file: ~/.aws/credentials
+2024-01-17 16:24:04,240 Using Launch Template ID: eagag
+2024-01-17 16:24:04,241 Using Remote Port Number: 8188
+2024-01-17 16:24:04,241 Using Local Port Number: 8188
+2024-01-17 16:24:04,241 Using AWS region: eu-north-1
+2024-01-17 16:24:04,241 Using AWS tag value: sd
+2024-01-17 16:24:04,441 Found credentials in shared credentials file: ~/.aws/credentials
+2024-01-17 16:24:04,441 AWS credentials are configured, proceeding.
+2024-01-17 16:24:04,466 Found credentials in shared credentials file: ~/.aws/credentials
+2024-01-17 16:29:42,717 Using Launch Template ID: esahg
+2024-01-17 16:29:42,718 Using Remote Port Number: 8188
+2024-01-17 16:29:42,718 Using Local Port Number: 8188
+2024-01-17 16:29:42,718 Using AWS region: eu-north-1
+2024-01-17 16:29:42,718 Using AWS tag value: sd
+2024-01-17 16:29:42,890 Found credentials in shared credentials file: ~/.aws/credentials
+2024-01-17 16:29:42,891 AWS credentials are configured, proceeding.
+2024-01-17 16:29:42,898 Found credentials in shared credentials file: ~/.aws/credentials
+2024-01-17 16:29:43,218 Failed to describe launch templates: An error occurred (UnauthorizedOperation) when calling the DescribeLaunchTemplates operation: You are not authorized to perform this operation. User: arn:aws:iam::702712055786:user/sd-training is not authorized to perform: ec2:DescribeLaunchTemplates because no identity-based policy allows the ec2:DescribeLaunchTemplates action
+2024-01-17 16:40:38,055 Using Launch Template ID: eagg
+2024-01-17 16:40:38,056 Using Remote Port Number: 8188
+2024-01-17 16:40:38,056 Using Local Port Number: 8188
+2024-01-17 16:40:38,056 Using AWS region: eu-north-1
+2024-01-17 16:40:38,056 Using AWS tag value: sd
+2024-01-17 16:40:38,341 Found credentials in shared credentials file: ~/.aws/credentials
+2024-01-17 16:40:38,342 AWS credentials are configured, proceeding.
+2024-01-17 16:40:38,351 Found credentials in shared credentials file: ~/.aws/credentials
+2024-01-17 16:40:38,785 Failed to describe launch templates: An error occurred (UnauthorizedOperation) when calling the DescribeLaunchTemplates operation: You are not authorized to perform this operation. User: arn:aws:iam::702712055786:user/sd-training is not authorized to perform: ec2:DescribeLaunchTemplates because no identity-based policy allows the ec2:DescribeLaunchTemplates action
+2024-01-17 16:40:56,468 Using Launch Template ID: ag
+2024-01-17 16:40:56,468 Using Remote Port Number: 8188
+2024-01-17 16:40:56,469 Using Local Port Number: 8188
+2024-01-17 16:40:56,469 Using AWS region: eu-north-1
+2024-01-17 16:40:56,469 Using AWS tag value: sd
+2024-01-17 16:40:56,710 Found credentials in shared credentials file: ~/.aws/credentials
+2024-01-17 16:40:56,710 AWS credentials are configured, proceeding.
+2024-01-17 16:40:56,720 Found credentials in shared credentials file: ~/.aws/credentials
+2024-01-17 16:40:57,003 Failed to describe launch templates: An error occurred (UnauthorizedOperation) when calling the DescribeLaunchTemplates operation: You are not authorized to perform this operation. User: arn:aws:iam::702712055786:user/sd-training is not authorized to perform: ec2:DescribeLaunchTemplates because no identity-based policy allows the ec2:DescribeLaunchTemplates action
+2024-01-17 16:41:30,593 Using Launch Template ID: aeg
+2024-01-17 16:41:30,595 Using Remote Port Number: 8188
+2024-01-17 16:41:30,595 Using Local Port Number: 8188
+2024-01-17 16:41:30,595 Using AWS region: eu-north-1
+2024-01-17 16:41:30,595 Using AWS tag value: sd
+2024-01-17 16:41:30,759 Found credentials in shared credentials file: ~/.aws/credentials
+2024-01-17 16:41:30,760 AWS credentials are configured, proceeding.
+2024-01-17 16:41:30,770 Found credentials in shared credentials file: ~/.aws/credentials
+2024-01-17 16:41:31,218 Failed to describe launch templates: An error occurred (UnauthorizedOperation) when calling the DescribeLaunchTemplates operation: You are not authorized to perform this operation. User: arn:aws:iam::702712055786:user/sd-training is not authorized to perform: ec2:DescribeLaunchTemplates because no identity-based policy allows the ec2:DescribeLaunchTemplates action
+2024-01-17 16:41:35,454 Using Launch Template ID: aega
+2024-01-17 16:41:35,454 Using Remote Port Number: 8188
+2024-01-17 16:41:35,454 Using Local Port Number: 8188
+2024-01-17 16:41:35,454 Using AWS region: eu-north-1
+2024-01-17 16:41:35,454 Using AWS tag value: sd
+2024-01-17 16:41:35,569 Found credentials in shared credentials file: ~/.aws/credentials
+2024-01-17 16:41:35,569 AWS credentials are configured, proceeding.
+2024-01-17 16:41:35,577 Found credentials in shared credentials file: ~/.aws/credentials
+2024-01-17 16:41:36,056 Failed to describe launch templates: An error occurred (InvalidLaunchTemplateId.Malformed) when calling the DescribeLaunchTemplates operation: The following launch template ids are malformed: aega
+2024-01-17 16:43:29,342 Using Launch Template ID: lt-0e096fddfc03f20b7
+2024-01-17 16:43:29,342 Using Remote Port Number: 8188
+2024-01-17 16:43:29,342 Using Local Port Number: 8188
+2024-01-17 16:43:29,342 Using AWS region: eu-north-1
+2024-01-17 16:43:29,342 Using AWS tag value: sd
+2024-01-17 16:43:29,439 Found credentials in shared credentials file: ~/.aws/credentials
+2024-01-17 16:43:29,439 AWS credentials are configured, proceeding.
+2024-01-17 16:43:29,446 Found credentials in shared credentials file: ~/.aws/credentials
+2024-01-17 16:43:29,951 The launch template ID lt-0e096fddfc03f20b7 is malformed. Please check the ID and try again.
+2024-01-17 16:47:34,363 Using Launch Template ID: lt-0e096fddfc03f20b7
+2024-01-17 16:47:34,363 Using Remote Port Number: 8188
+2024-01-17 16:47:34,364 Using Local Port Number: 8188
+2024-01-17 16:47:34,364 Using AWS region: eu-north-1
+2024-01-17 16:47:34,364 Using AWS tag value: sd
+2024-01-17 16:47:34,609 Found credentials in shared credentials file: ~/.aws/credentials
+2024-01-17 16:47:34,609 AWS credentials are configured, proceeding.
+2024-01-17 16:47:34,614 Found credentials in shared credentials file: ~/.aws/credentials
+2024-01-17 16:47:35,075 The launch template ID lt-0e096fddfc03f20b7 is malformed: An error occurred (InvalidLaunchTemplateId.Malformed) when calling the DescribeLaunchTemplates operation: The following launch template ids are malformed: lt-0e096fddfc03f20b7
+2024-01-17 16:54:01,726 Using Launch Template ID: 8126735
+2024-01-17 16:54:01,726 Using Remote Port Number: 8188
+2024-01-17 16:54:01,726 Using Local Port Number: 8188
+2024-01-17 16:54:01,726 Using AWS region: eu-north-1
+2024-01-17 16:54:01,726 Using AWS tag value: sd
+2024-01-17 16:54:01,806 Found credentials in shared credentials file: ~/.aws/credentials
+2024-01-17 16:54:01,806 AWS credentials are configured, proceeding.
+2024-01-17 16:55:44,082 Using Launch Template ID: 23462
+2024-01-17 16:55:44,083 Using Remote Port Number: 8188
+2024-01-17 16:55:44,083 Using Local Port Number: 8188
+2024-01-17 16:55:44,083 Using AWS region: eu-north-1
+2024-01-17 16:55:44,083 Using AWS tag value: sd
+2024-01-17 16:55:44,278 Found credentials in shared credentials file: ~/.aws/credentials
+2024-01-17 16:55:44,279 AWS credentials are configured, proceeding.
+2024-01-17 16:55:44,754 The launch template ID 23462 is malformed: An error occurred (InvalidLaunchTemplateId.Malformed) when calling the DescribeLaunchTemplates operation: The following launch template ids are malformed: 23462
+2024-01-17 16:56:08,880 Using Launch Template ID: lt-0e096fddfc03f20b7
+2024-01-17 16:56:08,881 Using Remote Port Number: 8188
+2024-01-17 16:56:08,881 Using Local Port Number: 8188
+2024-01-17 16:56:08,881 Using AWS region: eu-north-1
+2024-01-17 16:56:08,881 Using AWS tag value: sd
+2024-01-17 16:56:08,979 Found credentials in shared credentials file: ~/.aws/credentials
+2024-01-17 16:56:08,979 AWS credentials are configured, proceeding.
+2024-01-17 16:56:09,265 The launch template ID lt-0e096fddfc03f20b7 is malformed: An error occurred (InvalidLaunchTemplateId.Malformed) when calling the DescribeLaunchTemplates operation: The following launch template ids are malformed: lt-0e096fddfc03f20b7
+2024-01-17 16:58:56,503 Using Launch Template ID: 97124
+2024-01-17 16:58:56,503 Using Remote Port Number: 8188
+2024-01-17 16:58:56,503 Using Local Port Number: 8188
+2024-01-17 16:58:56,503 Using AWS region: eu-north-1
+2024-01-17 16:58:56,503 Using AWS tag value: sd
+2024-01-17 16:58:56,732 Found credentials in shared credentials file: ~/.aws/credentials
+2024-01-17 16:58:56,732 AWS credentials are configured, proceeding.
+2024-01-17 16:58:57,162 The launch template ID 97124 is malformed: An error occurred (InvalidLaunchTemplateId.Malformed) when calling the DescribeLaunchTemplates operation: The following launch template ids are malformed: 97124
+2024-01-17 17:01:03,495 Using Launch Template ID: 293756gj
+2024-01-17 17:01:03,495 Using Remote Port Number: 8188
+2024-01-17 17:01:03,495 Using Local Port Number: 8188
+2024-01-17 17:01:03,495 Using AWS region: eu-north-1
+2024-01-17 17:01:03,495 Using AWS tag value: sd
+2024-01-17 17:01:03,568 Found credentials in shared credentials file: ~/.aws/credentials
+2024-01-17 17:01:03,568 AWS credentials are configured, proceeding.
+2024-01-17 17:01:03,882 The launch template ID 293756gj is malformed: An error occurred (InvalidLaunchTemplateId.Malformed) when calling the DescribeLaunchTemplates operation: The following launch template ids are malformed: 293756gj
+2024-01-17 17:03:21,782 Using Launch Template ID: 293756gj
+2024-01-17 17:03:21,782 Using Remote Port Number: 8188
+2024-01-17 17:03:21,782 Using Local Port Number: 8188
+2024-01-17 17:03:21,782 Using AWS region: eu-north-1
+2024-01-17 17:03:21,782 Using AWS tag value: sd
+2024-01-17 17:03:30,284 Exiting...
+2024-01-17 17:03:31,931 Using Launch Template ID: 293756gj
+2024-01-17 17:03:31,932 Using Remote Port Number: 8188
+2024-01-17 17:03:31,932 Using Local Port Number: 8188
+2024-01-17 17:03:31,932 Using AWS region: eu-north-1
+2024-01-17 17:03:31,932 Using AWS tag value: sd
+2024-01-17 17:03:33,564 Found credentials in shared credentials file: ~/.aws/credentials
+2024-01-17 17:03:33,564 AWS credentials are configured, proceeding.
+2024-01-17 17:03:33,862 The launch template ID 293756gj is malformed: An error occurred (InvalidLaunchTemplateId.Malformed) when calling the DescribeLaunchTemplates operation: The following launch template ids are malformed: 293756gj
+2024-01-17 17:08:36,102 Using Launch Template ID: lt-0e096fddfc03f20b6
+2024-01-17 17:08:36,102 Using Remote Port Number: 8188
+2024-01-17 17:08:36,102 Using Local Port Number: 8188
+2024-01-17 17:08:36,102 Using AWS region: eu-north-1
+2024-01-17 17:08:36,102 Using AWS tag value: sd
+2024-01-17 17:08:38,925 Exiting...
+2024-01-17 17:13:27,375 Using Launch Template ID: lt-0e096fddfc03f20b6
+2024-01-17 17:13:27,375 Using Remote Port Number: 8188
+2024-01-17 17:13:27,375 Using Local Port Number: 8188
+2024-01-17 17:13:27,375 Using AWS region: eu-north-1
+2024-01-17 17:13:27,375 Using AWS tag value: sd
+2024-01-17 17:13:29,512 Exiting...

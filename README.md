@@ -1,40 +1,58 @@
-Overview
-This script is designed to automate the process of launching an Stable Diffusion server on EC2.
-- Updates an AWS security group with the user's current public IP address
-- Spins up a spot instance g5.4xlarge
-- Initializes the EBS volume
-- Updates various Git repositories on the instance.
-  
-Features
-Logging: Captures all actions in a log file.
-AWS CLI Check: Verifies if AWS CLI is properly configured before proceeding.
-IP Management: Retrieves the local public IP and updates the AWS security group if the IP has changed.
-Instance Initialization: Runs user data script to update Git repositories and initialize EBS volume.
-Instance Management: Launches an EC2 instance and waits until it's in a running state with a public IP.
-SSH Configuration: Updates the SSH config file with the new instance's IP for easy access.
+markdown
+# EC2 Instance Starter
 
-Prerequisites
-AWS CLI installed and configured with the necessary permissions.
-jq installed for JSON parsing.
-curl installed for IP retrieval.
-An existing AWS security group and launch template.
+This script is designed to start an Amazon EC2 instance based on a predefined launch template and establish a connection to it.
+
+## Table of Contents
+
+- [Getting Started](#getting-started)
+- [Prerequisites](#prerequisites)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Contributing](#contributing)
+- [License](#license)
+- [Contact](#contact)
+
+## Getting Started
+
+These instructions will guide you on how to use this script for starting and connecting to an EC2 instance.
+
+## Prerequisites
+
+Before you start, make sure you have:
+
+- An AWS account
+- AWS CLI installed and configured
+- Install AWS System Manager plug-in https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html
+- A predefined EC2 launch template
+
+## Installation
+
+1. Clone the repo
+   ```sh
+   git clone https://github.com/cavit99/Start-EC2.git
+
+Install the required packages
+sh
+pip install -r requirements.txt
 
 Usage
-Set up the script:
-Place the script in a secure directory.
-Ensure the script has execute permissions: chmod +x start-sd.sh.
-Run the script:
-Execute the script: ./start-sd.sh.
-Monitor the log start-sd.log file for progress and errors.
-SSH into the instance:
-Once the script has completed, use SSH to connect to the instance: ssh sd.
+Run the script
+sh
+python start_ec2.py
 
-Configuration
-Modify the logfile variable to change the log file location.
-Update the security group ID and region as per your AWS setup.
-Adjust the launch template ID to match your configuration.
+Follow the prompts to select your launch template and start the instance.
+Contributing
+Contributions are what make the open-source community such an amazing place to learn, inspire, and create. Any contributions you make are greatly appreciated.
+Fork the Project
+Create your Feature Branch (git checkout -b feature/AmazingFeature)
+Commit your Changes (git commit -m 'Add some AmazingFeature')
+Push to the Branch (git push origin feature/AmazingFeature)
+Open a Pull Request
+License
+Distributed under the MIT License. See LICENSE for more information.
+Contact
+Cavit Erginsoy cavit@erginsoy.com
+Project Link: https://github.com/cavit99/Start-EC2
 
-Troubleshooting
-Check the log file for detailed error messages.
-Ensure all prerequisites are met and correctly configured.
-Verify that your AWS user has the necessary permissions to perform the actions in the script.
+This README provides a clear and concise description of the project, including how to get started, prerequisites, installation instructions, usage, and how to contribute[1][3][5][7][9][10][11]. It also includes a license and contact information[5]. 
