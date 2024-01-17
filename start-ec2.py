@@ -7,7 +7,9 @@ import sys
 import requests
 import yaml
 import subprocess
+import time
 import shutil
+import botocore.config
 from botocore.exceptions import NoCredentialsError, ClientError
 
 # Set up logging
@@ -144,46 +146,126 @@ def start_instance_if_stopped(ec2_resource, ec2_client, instance_id: str) -> Non
             else:
                 logging.error(f"An error occurred while starting the instance: {e}")
                 sys.exit(1) 
+def check_existing_ssm(ssm, instance_id: str, awsregion: str) -> bool:
+    try:
+        # List the active sessions for the given instance ID
+        response = ssm.describe_sessions(
+            State='Active',
+            Filters=[
+                {
+                    'key': 'Target',
+                    'value': instance_id
+                }
+            ]
+        )
+        sessions = response.get('Sessions', [])
+        if sessions:
+            logging.info(f"Active SSM session(s) found for instance {instance_id}.")
+            # Here you can decide whether to reuse an existing session or not
+            # For example, you could return True to indicate a session is active
+            # or you could terminate the session and return False to start a new one
+            return True
+        else:
+            logging.info(f"No active SSM sessions found for instance {instance_id}.")
+            return False
+    except ClientError as e:
+        logging.error(f"Error checking for existing SSM sessions: {e}")
+        return False
+    
+def start_ssm_session_if_needed(ssm, instance_id: str, awsregion: str) -> bool:
+    # Check for existing SSM sessions and terminate if needed
+    if check_existing_ssm(ssm, instance_id, awsregion):
+        logging.info(f"Terminating active SSM session for instance {instance_id}...")
+        terminate_ssm_session(ssm, instance_id, awsregion)
+        time.sleep(5)  # Ensure the session is terminated before starting a new one
+    else:
+        logging.info(f"No active SSM sessions found for instance {instance_id}.")
+
+    # Now attempt to start a new SSM session
+    session_started = start_ssm_session(ssm, instance_id, awsregion)
+    logging.info(f"SSM session started: {session_started}")
+    return session_started
 
 def start_ssm_session(ssm, instance_id: str, awsregion: str) -> bool:
-    logging.info(f"Starting a session with instance {instance_id}...")
+    logging.info("Attempting to start SSM session...")
+    if not is_ssm_agent_configured(ssm, instance_id):
+        logging.error(f"SSM agent is not correctly configured on the instance: {instance_id}")
+        return False
+    session_started = initiate_ssm_session(ssm, instance_id, awsregion)
+    if session_started:
+        logging.info(f"SSM session started successfully for instance {instance_id}.")
+    else:
+        logging.error(f"Failed to start SSM session for instance {instance_id}.")
+    return session_started
+
+def is_ssm_agent_configured(ssm, instance_id: str) -> bool:
     try:
         response = ssm.describe_instance_information(
             InstanceInformationFilterList=[{'key': 'InstanceIds', 'valueSet': [instance_id]}]
         )
-        if not response['InstanceInformationList']:
-            logging.error(f"SSM agent is not correctly configured on the instance: {instance_id}")
-            return False
-        logging.info("SSM agent is correctly configured. Attempting to start session...")
-        
-        # Check if AWS CLI is installed
-        if not shutil.which("aws"):
-            logging.error("AWS CLI is not installed or not found in PATH.")
-            return False
+        return bool(response['InstanceInformationList'])
+    except ClientError as e:
+        logging.error(f"ClientError occurred while checking SSM agent configuration: {e}")
+        return False
 
-        # Use the AWS CLI 'aws ssm start-session' command to start an interactive shell session
-        start_session_command = [
-            "aws", "ssm", "start-session",
-            "--target", instance_id,
-            "--region", awsregion
-        ]
-        result = subprocess.run(start_session_command, capture_output=True, text=True)
-        
+def initiate_ssm_session(ssm, instance_id: str, awsregion: str) -> bool:
+    logging.info("SSM agent is correctly configured. Attempting to start session...")
+
+    # Check if AWS CLI is installed
+    if not shutil.which("aws"):
+        logging.error("AWS CLI is not installed or not found in PATH.")
+        return False
+
+    # Use the AWS CLI 'aws ssm start-session' command to start an interactive shell session
+    start_session_command = [
+        "aws",
+        "ssm",
+        "start-session",
+        "--target",
+        instance_id,
+        "--region",
+        awsregion
+    ]
+
+    logging.info(f"Running command: {' '.join(start_session_command)}")
+
+    try:
+        result = subprocess.run(start_session_command, timeout=30)  # Set a timeout for the command
+
         if result.returncode != 0:
             logging.error(f"Failed to start SSM session: {result.stderr}")
             return False
-        
+
+        logging.info(f"SSM session started successfully.")
         return True
-    except ClientError as e:
-        logging.error(f"ClientError occurred: {e}")
+
+    except subprocess.TimeoutExpired:
+        logging.error("SSM session command timed out.")
         return False
+
     except subprocess.CalledProcessError as e:
         logging.error(f"An error occurred while starting the SSM session: {e}")
         return False
+
     except Exception as e:
         logging.error(f"An unexpected error occurred: {e}")
         return False
     
+def terminate_ssm_session(ssm, instance_id: str, awsregion: str) -> None:
+    response = ssm.describe_sessions(
+        State='Active',
+        Filters=[
+            {
+                'key': 'Target',
+                'value': instance_id
+            }
+        ]
+    )
+    sessions = response.get('Sessions', [])
+    for session in sessions:
+        ssm.terminate_session(SessionId=session['SessionId'])
+        logging.info(f"Terminated SSM session {session['SessionId']}")
+
 def main() -> None:
 
     if not is_connected():
@@ -196,9 +278,17 @@ def main() -> None:
         return
     
     logging.info("AWS credentials are configured, proceeding.")
-    ec2_resource = session.resource('ec2', region_name=awsregion)
-    ec2_client = session.client('ec2', region_name=awsregion)
-    ssm = session.client('ssm', region_name=awsregion)
+
+    # Create a Config object with custom settings
+    custom_config = botocore.config.Config(
+        read_timeout=900,
+        connect_timeout=900,
+        retries={'max_attempts': 0}
+    )
+
+    ec2_resource = session.resource('ec2', region_name=awsregion, config=custom_config)
+    ec2_client = session.client('ec2', region_name=awsregion, config=custom_config)
+    ssm = session.client('ssm', region_name=awsregion, config=custom_config)
 
 
     if not does_launch_template_exist(ec2_client, LAUNCH_TEMPLATE_ID):
@@ -219,7 +309,6 @@ def main() -> None:
         instance_id = existing_instance_id
     else:
         try:
-            # Pass both ec2_resource and ec2_client to the run_instance function
             instance_id = run_instance(ec2_resource, ec2_client, LAUNCH_TEMPLATE_ID)
         except ClientError as e:
             if 'UnauthorizedOperation' in str(e):
@@ -227,7 +316,7 @@ def main() -> None:
             else:
                 logging.error(f"Failed to create instance: {e}")
             return
-    start_ssm_session(ssm, instance_id)
+    start_ssm_session_if_needed(ssm, instance_id, awsregion)
 
 if __name__ == "__main__":
     main()
