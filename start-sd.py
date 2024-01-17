@@ -106,7 +106,14 @@ def main() -> None:
 
     if existing_instance_id:
         logging.info(f"An instance with tag value '{awstagvalue}' exists. Instance ID: {existing_instance_id}")
-        start_instance_if_stopped(ec2, existing_instance_id)
+        try:
+            start_instance_if_stopped(ec2, existing_instance_id)
+        except botocore.exceptions.ClientError as e:
+            if 'UnauthorizedOperation' in str(e):
+                logging.error("You do not have the necessary permissions to start instances. Please check your IAM policies.")
+            else:
+                logging.error(f"Failed to start instance: {e}")
+            return
         instance_id = existing_instance_id
     else:
         try:
