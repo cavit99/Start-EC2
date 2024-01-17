@@ -56,13 +56,17 @@ def run_instance(ec2, launch_template_id: str, user_data: str) -> str:
         MaxCount=1,
         MinCount=1
     )[0]
+    logging.info(f"Waiting for instance {instance.id} to start...")
     instance.wait_until_running()
     logging.info(f"Instance {instance.id} is now running.")
     return instance.id
 
 def get_instance_id(ec2, name_tag: str) -> str:
     instances = ec2.instances.filter(
-        Filters=[{'Name': 'tag:Name', 'Values': [name_tag]}])
+        Filters=[
+            {'Name': 'tag:Name', 'Values': [name_tag]},
+            {'Name': 'instance-state-name', 'Values': ['pending', 'running', 'stopping', 'stopped']}
+        ])
     for instance in instances:
         return instance.id
     return ""
@@ -71,9 +75,17 @@ def start_instance_if_stopped(ec2, instance_id: str) -> None:
     instance = ec2.Instance(instance_id)
     if instance.state['Name'] != 'running':
         logging.info(f"Starting instance {instance_id}...")
-        instance.start()
-        instance.wait_until_running()
-        logging.info(f"Instance {instance_id} is now running.")
+        try:
+            instance.start()
+            logging.info(f"Waiting for instance {instance_id} to start...")
+            instance.wait_until_running()
+            logging.info(f"Instance {instance_id} is now running.")
+        except ClientError as e:
+            if e.response['Error']['Code'] == 'UnauthorizedOperation':
+                raise Exception("You are not authorized to start the instance. Please check your AWS permissions.")
+            else:
+                raise Exception("An error occurred while starting the instance.")
+
 
 def start_ssm_session(ssm, instance_id: str) -> bool:
     logging.info(f"Starting a session with instance {instance_id}...")
@@ -108,7 +120,7 @@ def main() -> None:
         logging.info(f"An instance with tag value '{awstagvalue}' exists. Instance ID: {existing_instance_id}")
         try:
             start_instance_if_stopped(ec2, existing_instance_id)
-        except botocore.exceptions.ClientError as e:
+        except ClientError as e:
             if 'UnauthorizedOperation' in str(e):
                 logging.error("You do not have the necessary permissions to start instances. Please check your IAM policies.")
             else:
