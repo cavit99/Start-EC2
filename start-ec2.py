@@ -6,6 +6,7 @@ import logging
 import sys
 import requests
 import yaml
+import subprocess
 from botocore.exceptions import NoCredentialsError, ClientError
 
 # Set up logging
@@ -87,7 +88,7 @@ def run_instance(ec2_resource, ec2_client, launch_template_id: str) -> str:
     )[0]
     logging.info(f"Waiting for instance {instance.id} to start...")
     instance.wait_until_running()
-    logging.info(f"Instance {instance.id} is now running.")
+    logging.info(f"Instance {instance.id} is now running. Waiting for initialization...")
     
     waiter = ec2_client.get_waiter('instance_status_ok')
     waiter.wait(InstanceIds=[instance.id])
@@ -146,33 +147,22 @@ def start_instance_if_stopped(ec2_resource, ec2_client, instance_id: str) -> Non
 def start_ssm_session(ssm, instance_id: str) -> bool:
     logging.info(f"Starting a session with instance {instance_id}...")
     try:
-        response = ssm.describe_instance_information(InstanceInformationFilterList=[{'key': 'InstanceIds', 'valueSet': [instance_id]}])
-        if not response['InstanceInformationList']:
-            logging.error(f"SSM agent is not correctly configured on the instance: {instance_id}")
-            return False
-        logging.info("SSM agent is correctly configured. Attempting to start session...")
-        ssm.start_session(Target=instance_id, DocumentName='AWS-StartPortForwardingSession',
-                          Parameters={'portNumber': [REMOTE_PORT_NUMBER], 'localPortNumber': [LOCAL_PORT_NUMBER]})
-        return True
-    except ClientError as e:
-        return False
-
-def start_ssm_session(ssm, instance_id: str) -> bool:
-    logging.info(f"Starting a session with instance {instance_id}...")
-    try:
         response = ssm.describe_instance_information(
             InstanceInformationFilterList=[{'key': 'InstanceIds', 'valueSet': [instance_id]}]
         )
         if not response['InstanceInformationList']:
             logging.error(f"SSM agent is not correctly configured on the instance: {instance_id}")
             return False
-
         logging.info("SSM agent is correctly configured. Attempting to start session...")
-        ssm.start_session(
-            Target=instance_id,
-            DocumentName='AWS-StartPortForwardingSession',
-            Parameters={'portNumber': [REMOTE_PORT_NUMBER], 'localPortNumber': [LOCAL_PORT_NUMBER]}
-        )
+        
+        # Use the AWS CLI 'aws ssm start-session' command to start an interactive shell session
+        # Make sure the AWS CLI is installed and configured with the necessary permissions
+        start_session_command = [
+            "aws", "ssm", "start-session",
+            "--target", instance_id,
+            "--region", awsregion
+        ]
+        subprocess.run(start_session_command)
         return True
     except ClientError as e:
         logging.error(f"ClientError occurred: {e}")
@@ -180,6 +170,7 @@ def start_ssm_session(ssm, instance_id: str) -> bool:
     except Exception as e:
         logging.error(f"An unexpected error occurred: {e}")
         return False
+    
 def main() -> None:
 
     if not is_connected():
