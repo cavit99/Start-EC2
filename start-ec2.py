@@ -5,7 +5,6 @@ import boto3
 import logging
 import sys
 import requests
-import time
 import yaml
 from botocore.exceptions import NoCredentialsError, ClientError
 
@@ -161,14 +160,19 @@ def start_ssm_session(ssm, instance_id: str) -> bool:
 def start_ssm_session(ssm, instance_id: str) -> bool:
     logging.info(f"Starting a session with instance {instance_id}...")
     try:
-        response = ssm.describe_instance_information(InstanceInformationFilterList=[{'key': 'InstanceIds', 'valueSet': [instance_id]}])
+        response = ssm.describe_instance_information(
+            InstanceInformationFilterList=[{'key': 'InstanceIds', 'valueSet': [instance_id]}]
+        )
         if not response['InstanceInformationList']:
             logging.error(f"SSM agent is not correctly configured on the instance: {instance_id}")
             return False
+
         logging.info("SSM agent is correctly configured. Attempting to start session...")
-        ssm.start_session(Target=instance_id, DocumentName='AWS-StartPortForwardingSession', Parameters={'portNumber': [REMOTE_PORT_NUMBER], 'localPortNumber': [LOCAL_PORT_NUMBER]})
-        while True: 
-            time.sleep(10) 
+        ssm.start_session(
+            Target=instance_id,
+            DocumentName='AWS-StartPortForwardingSession',
+            Parameters={'portNumber': [REMOTE_PORT_NUMBER], 'localPortNumber': [LOCAL_PORT_NUMBER]}
+        )
         return True
     except ClientError as e:
         logging.error(f"ClientError occurred: {e}")
@@ -176,7 +180,6 @@ def start_ssm_session(ssm, instance_id: str) -> bool:
     except Exception as e:
         logging.error(f"An unexpected error occurred: {e}")
         return False
-
 def main() -> None:
 
     if not is_connected():
