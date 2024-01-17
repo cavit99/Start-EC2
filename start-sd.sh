@@ -73,7 +73,7 @@ else
 fi  
   
 # Start a session with the instance using AWS Systems Manager  
-if aws ssm start-session  --target $instance_id; then  
+if aws ssm start-session  --target $instance_id --document-name AWS-StartPortForwardingSession --parameters '{"portNumber":["8188"],"localPortNumber":["8188"]}'; then  
     log "Successfully started a session with the instance."  
 else  
     log "Failed to start a session with the instance."  

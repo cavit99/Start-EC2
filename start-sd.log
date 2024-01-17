@@ -5,3 +5,10 @@
 2024-01-16 11:59:23 Failed to connect to the instance.
 2024-01-16 18:38:05 Failed to describe instances. Quitting
 2024-01-16 18:43:28 An instance with SD tag is already running. Instance ID: i-0610f97d8d97d879f
+2024-01-16 21:24:04 Waiting for the instance to be in a running state...
+2024-01-16 21:24:16 Instance is running.
+2024-01-16 21:24:17 Failed to start a session with the instance.
+2024-01-16 21:24:58 An instance with SD tag is already running. Instance ID: i-0345416ccca3d26d6
+2024-01-16 21:24:58 Failed to start a session with the instance.
+2024-01-16 21:25:15 An instance with SD tag is already running. Instance ID: i-0345416ccca3d26d6
+2024-01-16 21:26:26 Successfully started a session with the instance.
