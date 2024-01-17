@@ -42,6 +42,7 @@ def is_aws_configured() -> bool:
         return True
     
 def run_instance(ec2, launch_template_id: str, user_data: str) -> str:
+    print("Creating a new instance...")
     instance = ec2.create_instances(
         LaunchTemplate={'LaunchTemplateId': launch_template_id},
         UserData=user_data,
@@ -49,6 +50,7 @@ def run_instance(ec2, launch_template_id: str, user_data: str) -> str:
         MinCount=1
     )[0]
     instance.wait_until_running()
+    print(f"Instance {instance.id} is now running.")
     return instance.id
 
 def get_instance_id(ec2, name_tag: str) -> str:
@@ -61,10 +63,13 @@ def get_instance_id(ec2, name_tag: str) -> str:
 def start_instance_if_stopped(ec2, instance_id: str) -> None:
     instance = ec2.Instance(instance_id)
     if instance.state['Name'] != 'running':
+        print(f"Starting instance {instance_id}...")
         instance.start()
         instance.wait_until_running()
+        print(f"Instance {instance_id} is now running.")
 
 def start_ssm_session(ssm, instance_id: str) -> bool:
+    print(f"Starting a session with instance {instance_id}...")
     try:
         response = ssm.describe_instance_information(InstanceInformationFilterList=[{'key': 'InstanceIds', 'valueSet': [instance_id]}])
         if not response['InstanceInformationList']:
@@ -72,6 +77,7 @@ def start_ssm_session(ssm, instance_id: str) -> bool:
             return False
         ssm.start_session(Target=instance_id, DocumentName='AWS-StartPortForwardingSession',
                           Parameters={'portNumber': [REMOTE_PORT_NUMBER], 'localPortNumber': [LOCAL_PORT_NUMBER]})
+        print("Session started successfully.")
         return True
     except ClientError as e:
         logging.error(f"Failed to start a session with the instance: {e}")
@@ -82,6 +88,7 @@ def main() -> None:
     if not is_aws_configured():
         logging.error("AWS is not configured. Please configure it and try again.")
         return
+    print("AWS credentials are configured, proceeding.")
 
     session = boto3.Session(region_name=awsregion)
     ec2 = session.resource('ec2')
