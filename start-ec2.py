@@ -58,9 +58,9 @@ def is_aws_configured() -> boto3.Session:
     except NoCredentialsError:
         return None
  
-def does_launch_template_exist(ec2, launch_template_id: str) -> bool:
+def does_launch_template_exist(ec2_client, launch_template_id: str) -> bool:
     try:
-        response = ec2.describe_launch_templates(
+        response = ec2_client.describe_launch_templates(
             LaunchTemplateIds=[launch_template_id]
         )
         return bool(response['LaunchTemplates'])
@@ -78,9 +78,9 @@ def does_launch_template_exist(ec2, launch_template_id: str) -> bool:
         return False
 
 # Create a new instance
-def run_instance(ec2, launch_template_id: str) -> str:
+def run_instance(ec2_resource, launch_template_id: str) -> str:
     logging.info("Creating a new instance...")
-    instance = ec2.create_instances(
+    instance = ec2_resource.create_instances(
         LaunchTemplate={'LaunchTemplateId': launch_template_id},
         MaxCount=1,
         MinCount=1
@@ -90,8 +90,8 @@ def run_instance(ec2, launch_template_id: str) -> str:
     logging.info(f"Instance {instance.id} is now running.")
     return instance.id
 
-def get_instance_id(ec2, name_tag: str) -> str:
-    instances = ec2.instances.filter(
+def get_instance_id(ec2_resource, name_tag: str) -> str:
+    instances = ec2_resource.instances.filter(
         Filters=[
             {'Name': 'tag:Name', 'Values': [name_tag]},
             {'Name': 'instance-state-name', 'Values': ['pending', 'running', 'stopping', 'stopped']}
@@ -101,8 +101,8 @@ def get_instance_id(ec2, name_tag: str) -> str:
     logging.info(f"No instances with tag value '{name_tag}' found.")
     return ""
 
-def start_instance_if_stopped(ec2, instance_id: str) -> None:
-    instance = ec2.Instance(instance_id)
+def start_instance_if_stopped(ec2_resource, instance_id: str) -> None:
+    instance = ec2_resource.Instance(instance_id)
     if instance.state['Name'] != 'running':
         logging.info(f"Starting instance {instance_id}...")
         try:
@@ -149,19 +149,20 @@ def main() -> None:
         return
     
     logging.info("AWS credentials are configured, proceeding.")
-    ec2 = session.resource('ec2', region_name=awsregion)
+    ec2_resource = session.resource('ec2', region_name=awsregion)
+    ec2_client = session.client('ec2', region_name=awsregion)
     ssm = session.client('ssm', region_name=awsregion)
 
 
-    if not does_launch_template_exist(ec2, LAUNCH_TEMPLATE_ID):
+    if not does_launch_template_exist(ec2_client, LAUNCH_TEMPLATE_ID):
         return
 
-    existing_instance_id = get_instance_id(ec2, awstagvalue)
+    existing_instance_id = get_instance_id(ec2_resource, awstagvalue)
 
     if existing_instance_id:
         logging.info(f"An instance with tag value '{awstagvalue}' exists. Instance ID: {existing_instance_id}")
         try:
-            start_instance_if_stopped(ec2, existing_instance_id)
+            start_instance_if_stopped(ec2_resource, existing_instance_id)
         except ClientError as e:
             if 'UnauthorizedOperation' in str(e):
                 logging.error("You do not have the necessary permissions to start instances. Please check your IAM policies.")
@@ -171,7 +172,7 @@ def main() -> None:
         instance_id = existing_instance_id
     else:
         try:
-            instance_id = run_instance(ec2, LAUNCH_TEMPLATE_ID)
+            instance_id = run_instance(ec2_resource, LAUNCH_TEMPLATE_ID)
         except ClientError as e:
             if 'UnauthorizedOperation' in str(e):
                 logging.error("You do not have the necessary permissions to create instances. Please check your IAM policies.")
