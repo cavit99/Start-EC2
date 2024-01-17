@@ -1,7 +1,6 @@
 # MIT License
 # Copyright (c) 2024 Cavit Erginsoy
 
-
 import boto3
 import logging
 import sys
@@ -36,17 +35,6 @@ logging.info(f"Using Remote Port Number: {REMOTE_PORT_NUMBER}")
 logging.info(f"Using Local Port Number: {LOCAL_PORT_NUMBER}")
 logging.info(f"Using AWS region: {awsregion}")
 logging.info(f"Using AWS tag value: {awstagvalue}")
-
-
-user_data = '''#!/bin/bash
-cd /home/ubuntu/stable-diffusion-webui && git rev-parse --is-inside-work-tree > /dev/null 2>&1 && git pull
-cd /home/ubuntu/kohya_ss && git rev-parse --is-inside-work-tree > /dev/null 2>&1 && git pull
-cd /home/ubuntu/ComfyUI && git rev-parse --is-inside-work-tree > /dev/null 2>&1 && git pull
-find /home/ubuntu/stable-diffusion-webui/extensions -maxdepth 2 -type d -exec sh -c 'cd {} && git rev-parse --is-inside-work-tree > /dev/null 2>&1 && git pull' \;
-find /home/ubuntu/ComfyUI/custom_nodes -maxdepth 2 -type d -exec sh -c 'cd {} && git rev-parse --is-inside-work-tree > /dev/null 2>&1 && git pull' \;
-sudo apt-get update
-nohup fio --filename=/dev/nvme0n1 --rw=read --bs=1M --iodepth=32 --ioengine=libaio --direct=1 --name=volume-initialize &
-'''
 
 confirmation = input("Press Enter to continue or type q to exit: ")
 if confirmation:
@@ -92,11 +80,10 @@ def does_launch_template_exist(ec2, launch_template_id: str) -> bool:
         return False
 
 # Create a new instance
-def run_instance(ec2, launch_template_id: str, user_data: str) -> str:
+def run_instance(ec2, launch_template_id: str) -> str:
     logging.info("Creating a new instance...")
     instance = ec2.create_instances(
         LaunchTemplate={'LaunchTemplateId': launch_template_id},
-        UserData=user_data,
         MaxCount=1,
         MinCount=1
     )[0]
@@ -190,7 +177,7 @@ def main() -> None:
         instance_id = existing_instance_id
     else:
         try:
-            instance_id = run_instance(ec2, LAUNCH_TEMPLATE_ID, user_data)
+            instance_id = run_instance(ec2, LAUNCH_TEMPLATE_ID)
         except ClientError as e:
             if 'UnauthorizedOperation' in str(e):
                 logging.error("You do not have the necessary permissions to create instances. Please check your IAM policies.")
