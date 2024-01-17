@@ -5,6 +5,7 @@ import boto3
 import logging
 import sys
 import requests
+import time
 import yaml
 from botocore.exceptions import NoCredentialsError, ClientError
 
@@ -78,7 +79,7 @@ def does_launch_template_exist(ec2_client, launch_template_id: str) -> bool:
         return False
 
 # Create a new instance
-def run_instance(ec2_resource, launch_template_id: str) -> str:
+def run_instance(ec2_resource, ec2_client, launch_template_id: str) -> str:
     logging.info("Creating a new instance...")
     instance = ec2_resource.create_instances(
         LaunchTemplate={'LaunchTemplateId': launch_template_id},
@@ -88,6 +89,15 @@ def run_instance(ec2_resource, launch_template_id: str) -> str:
     logging.info(f"Waiting for instance {instance.id} to start...")
     instance.wait_until_running()
     logging.info(f"Instance {instance.id} is now running.")
+    
+    waiter = ec2_client.get_waiter('instance_status_ok')
+    waiter.wait(InstanceIds=[instance.id])
+    logging.info(f"Instance {instance.id} has passed status checks.")
+    
+    waiter = ec2_client.get_waiter('system_status_ok')
+    waiter.wait(InstanceIds=[instance.id])
+    logging.info(f"System on instance {instance.id} has passed status checks.")
+    
     return instance.id
 
 def get_instance_id(ec2_resource, name_tag: str) -> str:
@@ -101,7 +111,7 @@ def get_instance_id(ec2_resource, name_tag: str) -> str:
     logging.info(f"No instances with tag value '{name_tag}' found.")
     return ""
 
-def start_instance_if_stopped(ec2_resource, instance_id: str) -> None:
+def start_instance_if_stopped(ec2_resource, ec2_client, instance_id: str) -> None:
     instance = ec2_resource.Instance(instance_id)
     if instance.state['Name'] != 'running':
         logging.info(f"Starting instance {instance_id}...")
@@ -109,19 +119,30 @@ def start_instance_if_stopped(ec2_resource, instance_id: str) -> None:
             instance.start()
             delay = 15
             max_attempts = 20
-            logging.info(f"Waiting for instance {instance_id} to start...\nChecking every {delay} seconds, max {max_attempts} attempts")
+            logging.info(f"Waiting for instance {instance_id} to start...")
+            logging.info(f"Checking every {delay} seconds, max {max_attempts} attempts")
             instance.wait_until_running(WaiterConfig={
                 'Delay': delay,
                 'MaxAttempts': max_attempts
             })
-            logging.info(f"Instance {instance_id} is now running.")
+            logging.info(f"Instance {instance_id} is now running. Waiting for initialization...")
+            
+
+            waiter = ec2_client.get_waiter('instance_status_ok')
+            waiter.wait(InstanceIds=[instance.id])
+            logging.info(f"Instance {instance.id} has passed status checks.")
+            
+            waiter = ec2_client.get_waiter('system_status_ok')
+            waiter.wait(InstanceIds=[instance.id])
+            logging.info(f"System on instance {instance.id} has passed status checks.")
+            
         except ClientError as e:
             if e.response['Error']['Code'] == 'UnauthorizedOperation':
                 logging.error("You are not authorized to start the instance. Please check your AWS permissions.")
-                sys.exit(1)  # Exit the script with an error code
+                sys.exit(1)  
             else:
                 logging.error(f"An error occurred while starting the instance: {e}")
-                sys.exit(1)  # Exit the script with an error code
+                sys.exit(1) 
 
 def start_ssm_session(ssm, instance_id: str) -> bool:
     logging.info(f"Starting a session with instance {instance_id}...")
@@ -162,7 +183,7 @@ def main() -> None:
     if existing_instance_id:
         logging.info(f"An instance with tag value '{awstagvalue}' exists. Instance ID: {existing_instance_id}")
         try:
-            start_instance_if_stopped(ec2_resource, existing_instance_id)
+            start_instance_if_stopped(ec2_resource, ec2_client, existing_instance_id)
         except ClientError as e:
             if 'UnauthorizedOperation' in str(e):
                 logging.error("You do not have the necessary permissions to start instances. Please check your IAM policies.")
@@ -172,7 +193,8 @@ def main() -> None:
         instance_id = existing_instance_id
     else:
         try:
-            instance_id = run_instance(ec2_resource, LAUNCH_TEMPLATE_ID)
+            # Pass both ec2_resource and ec2_client to the run_instance function
+            instance_id = run_instance(ec2_resource, ec2_client, LAUNCH_TEMPLATE_ID)
         except ClientError as e:
             if 'UnauthorizedOperation' in str(e):
                 logging.error("You do not have the necessary permissions to create instances. Please check your IAM policies.")
@@ -180,11 +202,21 @@ def main() -> None:
                 logging.error(f"Failed to create instance: {e}")
             return
 
-    if start_ssm_session(ssm, instance_id):
-        logging.info("Successfully started a session with the instance.")
-    else:
-        logging.error("Failed to start a session with the instance.")
-
+def start_ssm_session(ssm, instance_id: str) -> bool:
+    logging.info(f"Starting a session with instance {instance_id}...")
+    try:
+        response = ssm.describe_instance_information(InstanceInformationFilterList=[{'key': 'InstanceIds', 'valueSet': [instance_id]}])
+        if not response['InstanceInformationList']:
+            logging.error(f"SSM agent is not correctly configured on the instance: {instance_id}")
+            return False
+        logging.info("SSM agent is correctly configured. Attempting to start session...")
+        ssm.start_session(Target=instance_id, DocumentName='AWS-StartPortForwardingSession',
+                          Parameters={'portNumber': [REMOTE_PORT_NUMBER], 'localPortNumber': [LOCAL_PORT_NUMBER]})
+        while True:  # Keep the script running
+            time.sleep(10)  # Sleep for 10 seconds to avoid busy waiting
+        return True
+    except ClientError as e:
+        return False
 
 if __name__ == "__main__":
     main()
