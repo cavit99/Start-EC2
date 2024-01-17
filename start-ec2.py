@@ -158,6 +158,25 @@ def start_ssm_session(ssm, instance_id: str) -> bool:
     except ClientError as e:
         return False
 
+def start_ssm_session(ssm, instance_id: str) -> bool:
+    logging.info(f"Starting a session with instance {instance_id}...")
+    try:
+        response = ssm.describe_instance_information(InstanceInformationFilterList=[{'key': 'InstanceIds', 'valueSet': [instance_id]}])
+        if not response['InstanceInformationList']:
+            logging.error(f"SSM agent is not correctly configured on the instance: {instance_id}")
+            return False
+        logging.info("SSM agent is correctly configured. Attempting to start session...")
+        ssm.start_session(Target=instance_id, DocumentName='AWS-StartPortForwardingSession', Parameters={'portNumber': [REMOTE_PORT_NUMBER], 'localPortNumber': [LOCAL_PORT_NUMBER]})
+        while True: 
+            time.sleep(10) 
+        return True
+    except ClientError as e:
+        logging.error(f"ClientError occurred: {e}")
+        return False
+    except Exception as e:
+        logging.error(f"An unexpected error occurred: {e}")
+        return False
+
 def main() -> None:
 
     if not is_connected():
@@ -201,22 +220,7 @@ def main() -> None:
             else:
                 logging.error(f"Failed to create instance: {e}")
             return
-
-def start_ssm_session(ssm, instance_id: str) -> bool:
-    logging.info(f"Starting a session with instance {instance_id}...")
-    try:
-        response = ssm.describe_instance_information(InstanceInformationFilterList=[{'key': 'InstanceIds', 'valueSet': [instance_id]}])
-        if not response['InstanceInformationList']:
-            logging.error(f"SSM agent is not correctly configured on the instance: {instance_id}")
-            return False
-        logging.info("SSM agent is correctly configured. Attempting to start session...")
-        ssm.start_session(Target=instance_id, DocumentName='AWS-StartPortForwardingSession',
-                          Parameters={'portNumber': [REMOTE_PORT_NUMBER], 'localPortNumber': [LOCAL_PORT_NUMBER]})
-        while True:  # Keep the script running
-            time.sleep(10)  # Sleep for 10 seconds to avoid busy waiting
-        return True
-    except ClientError as e:
-        return False
+    start_ssm_session(ssm, instance_id)
 
 if __name__ == "__main__":
     main()
