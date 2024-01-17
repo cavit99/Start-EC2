@@ -1,12 +1,19 @@
 import boto3
 import logging
 import os
+import sys
 import getpass
 from botocore.exceptions import NoCredentialsError, ClientError
 
 # Set up logging
-logging.basicConfig(filename='start-sd.log', level=logging.INFO, format='%(asctime)s %(message)s')
-
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s %(message)s',
+    handlers=[
+        logging.FileHandler('start-sd.log'),
+        logging.StreamHandler(sys.stdout)  # This will output to the console
+    ]
+)
 # Define variables
 LAUNCH_TEMPLATE_ID = 'lt-0e096fddfc03f20b6'
 REMOTE_PORT_NUMBER = '8188'
@@ -29,7 +36,7 @@ def is_aws_configured() -> bool:
         session.get_credentials()
         return True
     except NoCredentialsError:
-        print("AWS is not configured. Please enter your AWS credentials.\nPlease note the credentials will not be stored. In the future you should configure AWS-CLI instead to ensure that the credentials persist")
+        logging.error("AWS is not configured. Please enter your AWS credentials.\nPlease note the credentials will not be stored. In the future you should configure AWS-CLI instead to ensure that the credentials persist")
         aws_access_key_id = getpass.getpass("Enter your AWS Access Key ID: ")
         aws_secret_access_key = getpass.getpass("Enter your AWS Secret Access Key: ")
         region_name = input("Enter your AWS region (e.g., eu-north-1): ") or 'eu-north-1'
@@ -42,7 +49,7 @@ def is_aws_configured() -> bool:
         return True
     
 def run_instance(ec2, launch_template_id: str, user_data: str) -> str:
-    print("Creating a new instance...")
+    logging.info("Creating a new instance...")
     instance = ec2.create_instances(
         LaunchTemplate={'LaunchTemplateId': launch_template_id},
         UserData=user_data,
@@ -50,7 +57,7 @@ def run_instance(ec2, launch_template_id: str, user_data: str) -> str:
         MinCount=1
     )[0]
     instance.wait_until_running()
-    print(f"Instance {instance.id} is now running.")
+    logging.info(f"Instance {instance.id} is now running.")
     return instance.id
 
 def get_instance_id(ec2, name_tag: str) -> str:
@@ -63,21 +70,22 @@ def get_instance_id(ec2, name_tag: str) -> str:
 def start_instance_if_stopped(ec2, instance_id: str) -> None:
     instance = ec2.Instance(instance_id)
     if instance.state['Name'] != 'running':
-        print(f"Starting instance {instance_id}...")
+        logging.info(f"Starting instance {instance_id}...")
         instance.start()
         instance.wait_until_running()
-        print(f"Instance {instance_id} is now running.")
+        logging.info(f"Instance {instance_id} is now running.")
 
 def start_ssm_session(ssm, instance_id: str) -> bool:
-    print(f"Starting a session with instance {instance_id}...")
+    logging.info(f"Starting a session with instance {instance_id}...")
     try:
         response = ssm.describe_instance_information(InstanceInformationFilterList=[{'key': 'InstanceIds', 'valueSet': [instance_id]}])
         if not response['InstanceInformationList']:
             logging.error(f"SSM agent is not correctly configured on the instance: {instance_id}")
             return False
+        logging.info("SSM agent is correctly configured. Attempting to start session...")
         ssm.start_session(Target=instance_id, DocumentName='AWS-StartPortForwardingSession',
                           Parameters={'portNumber': [REMOTE_PORT_NUMBER], 'localPortNumber': [LOCAL_PORT_NUMBER]})
-        print("Session started successfully.")
+        logging.info("Session started successfully.")
         return True
     except ClientError as e:
         logging.error(f"Failed to start a session with the instance: {e}")
@@ -88,7 +96,7 @@ def main() -> None:
     if not is_aws_configured():
         logging.error("AWS is not configured. Please configure it and try again.")
         return
-    print("AWS credentials are configured, proceeding.")
+    logging.info("AWS credentials are configured, proceeding.")
 
     session = boto3.Session(region_name=awsregion)
     ec2 = session.resource('ec2')
