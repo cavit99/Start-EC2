@@ -149,7 +149,7 @@ def main() -> None:
         return
     
     logging.info("AWS credentials are configured, proceeding.")
-    ec2 = session.client('ec2', region_name=awsregion)
+    ec2 = session.resource('ec2', region_name=awsregion)
     ssm = session.client('ssm', region_name=awsregion)
 
 
