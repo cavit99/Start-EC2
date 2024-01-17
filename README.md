@@ -23,18 +23,21 @@ Before you start, make sure you have:
 
 1. Clone the repo
 ```sh
-git clone https://github.com/cavit99/Start-EC2.git```
+git clone https://github.com/cavit99/Start-EC2.git
+```
 
 
 2. Install the required packages
 ```sh
-pip install -r requirements.txt```
+pip install -r requirements.txt
+```
 
 ## Usage
 
 Run the script
 ```sh
-python start_ec2.py```
+python start_ec2.py
+```
 
 
 Follow the prompts to select your launch template and start the instance.
