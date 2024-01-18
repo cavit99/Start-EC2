@@ -39,17 +39,18 @@ LOCAL_PORT_NUMBER = config['local_port']
 aws_region = config['region']
 aws_tag_value = config['tag_value']
 
-
+# Log the configuration values for debugging purposes
 logging.info(f"Using Launch Template ID: {LAUNCH_TEMPLATE_ID}")
 logging.info(f"Using Remote Port Number: {REMOTE_PORT_NUMBER}")
 logging.info(f"Using Local Port Number: {LOCAL_PORT_NUMBER}")
 logging.info(f"Using AWS region: {aws_region}")
 logging.info(f"Using AWS tag value: {aws_tag_value}")
 
+# Ask for user confirmation before proceeding
 confirmation = input("Press Enter to continue or type q to exit: ")
 if confirmation:
     logging.info("Exiting...")
-    sys.exit()
+    raise SystemExit("User chose to exit.")
 
 ready_event = threading.Event()
 
@@ -89,9 +90,10 @@ def does_launch_template_exist(ec2_client, launch_template_id: str) -> bool:
         logging.error(f"An error occurred: {e}")
         return False
 
-# Create a new instance
+# Create a new instance using the specified launch template
 def run_instance(ec2_resource, ec2_client, launch_template_id: str) -> str:
     logging.info("Creating a new instance...")
+
     instance = ec2_resource.create_instances(
         LaunchTemplate={'LaunchTemplateId': launch_template_id},
         MaxCount=1,
@@ -407,6 +409,7 @@ def start_ssm_sessions(ssm, instance_id, aws_region):
         if port_forwarding_process is not None:  # Check if the variable is not None before using it
             terminate_port_forwarding_session(port_forwarding_process, ssm, instance_id)
         logging.info("About to start the SSM port forwarding session...")
+        # Start a new port forwarding session       
         port_forwarding_process = start_ssm_port_forwarding_session(ssm, instance_id, aws_region, REMOTE_PORT_NUMBER, LOCAL_PORT_NUMBER)
         if port_forwarding_process is None:
             logging.error("Unable to start the SSM port forwarding session. Exiting.")
@@ -438,6 +441,7 @@ def cleanup(port_forwarding_process, shell_session_process, ssm, instance_id):
         logging.error(f"Error terminating shell session: {e}")
 
 def main() -> None:
+    # Initialize the shell and port forwarding processes to None
     shell_session_process = None
     port_forwarding_process = None
     try:
@@ -450,6 +454,7 @@ def main() -> None:
         if instance_id is None:
             return
 
+        # Start the SSM sessions
         shell_session_process, port_forwarding_process = start_ssm_sessions(ssm, instance_id, aws_region)
         if shell_session_process is None:
             return
@@ -457,12 +462,17 @@ def main() -> None:
         # Wait for the shell session to finish
         shell_session_process.wait()
 
+    # If the script is interrupted, log the interruption and clean up
     except KeyboardInterrupt:
         logging.info("Script interrupted by user. Cleaning up...")
         cleanup(port_forwarding_process, shell_session_process, ssm, instance_id)
-        sys.exit(0)
+        raise SystemExit("Script interrupted by user") from None
+    
+    # If an unexpected error occurs, log the error
     except Exception as e:
         logging.error(f"An unexpected error occurred in main: {e}")
+        
+    # Regardless of how the script exits, clean up the resources
     finally:
         cleanup(port_forwarding_process, shell_session_process, ssm, instance_id)
 
