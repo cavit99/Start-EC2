@@ -1,5 +1,6 @@
-template: 'lt-0e096fddfc03f20b6'
-remote_port: '8188'
-local_port: '8188'
-region: 'eu-north-1'
-tag_value: 'sd'
+template: 'lt-0e096fddfc03f20b6' #put your aws launch template ID
+remote_port: '8188' #leave empty to disable port fowarding
+local_port: '8188' #leave empty to disable port fowarding
+region: 'eu-north-1' 
+tag_value: 'sd'  #note this key 'value', not key 'name'
+
