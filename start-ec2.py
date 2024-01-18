@@ -11,6 +11,7 @@ import time
 import shutil
 import botocore.config
 import threading
+
 from botocore.exceptions import NoCredentialsError, ClientError
 
 # Set up logging
@@ -24,8 +25,12 @@ logging.basicConfig(
 )
 
 # Load the configuration file
-with open('config.yaml', 'r') as f:
-    config = yaml.safe_load(f)
+try:
+    with open('config.yaml', 'r') as f:
+        config = yaml.safe_load(f)
+except FileNotFoundError:
+    logging.error("Configuration file not found. Please ensure 'config.yaml' exists.")
+    sys.exit()
 
 # Use the configuration values
 LAUNCH_TEMPLATE_ID = config['template']
@@ -45,6 +50,8 @@ confirmation = input("Press Enter to continue or type q to exit: ")
 if confirmation:
     logging.info("Exiting...")
     sys.exit()
+
+ready_event = threading.Event()
 
 def is_connected():
     try:
@@ -132,7 +139,6 @@ def start_instance_if_stopped(ec2_resource, ec2_client, instance_id: str) -> Non
 def check_existing_ssm(ssm, instance_id: str, awsregion: str) -> dict:
     try:
         response = ssm.describe_sessions(
-            State='Active',
             Filters=[
                 {
                     'key': 'Target',
@@ -149,19 +155,9 @@ def check_existing_ssm(ssm, instance_id: str, awsregion: str) -> dict:
             elif session['DocumentName'] == 'AWS-StartPortForwardingSession':
                 port_forwarding_sessions.append(session)
         
-        # Log the number of active shell and port forwarding sessions
-        logging.info(f"Found {len(shell_sessions)} active shell session(s) for instance {instance_id}.")
-        logging.info(f"Found {len(port_forwarding_sessions)} active port forwarding session(s) for instance {instance_id}.")
-
-        if shell_sessions:
-            logging.info("Active shell session(s) details:")
-            for session in shell_sessions:
-                logging.info(f"Session ID: {session['SessionId']}, Started At: {session['StartDate']}")
-
-        if port_forwarding_sessions:
-            logging.info("Active port forwarding session(s) details:")
-            for session in port_forwarding_sessions:
-                logging.info(f"Session ID: {session['SessionId']}, Started At: {session['StartDate']}")
+        # Log the number of shell and port forwarding sessions
+        logging.info(f"Found {len(shell_sessions)} shell session(s) for instance {instance_id}.")
+        logging.info(f"Found {len(port_forwarding_sessions)} port forwarding session(s) for instance {instance_id}.")
 
         return {
             'shell_sessions': shell_sessions,
@@ -193,7 +189,10 @@ def initiate_ssm_session(ssm, instance_id: str, awsregion: str) -> bool:
     logging.info(f"Running command: {' '.join(start_session_command)}")
 
     try:
-        result = subprocess.run(start_session_command)  
+        logging.info("About to start the SSM session...")
+        result = subprocess.run(start_session_command, stderr=subprocess.PIPE, check=True)
+        logging.info("SSM session started.")
+        
         if result.returncode != 0:
             logging.error(f"Failed to start SSM session: {result.stderr}")
             return False
@@ -213,31 +212,31 @@ def initiate_ssm_session(ssm, instance_id: str, awsregion: str) -> bool:
         logging.error(f"An unexpected error occurred: {e}")
         return False
         
+# Improved ensure_ssm_session function
 def ensure_ssm_session(ssm, instance_id: str, awsregion: str) -> bool:
-    # Check for existing SSM sessions
     existing_sessions = check_existing_ssm(ssm, instance_id, awsregion)
     
     if existing_sessions['shell_sessions']:
         logging.info(f"Terminating active SSM shell session for instance {instance_id}...")
         for session in existing_sessions['shell_sessions']:
             ssm.terminate_session(SessionId=session['SessionId'])
-        time.sleep(2)  # Ensure the session is terminated before starting a new one
+        time.sleep(2)
 
-    # Now attempt to start a new SSM shell session
     shell_session_started = start_ssm_shell_session(ssm, instance_id, awsregion)
     logging.info(f"SSM shell session started: {shell_session_started}")
+    if not shell_session_started:
+        return False
 
     if existing_sessions['port_forwarding_sessions']:
         logging.info(f"Terminating active SSM port forwarding session for instance {instance_id}...")
         for session in existing_sessions['port_forwarding_sessions']:
             ssm.terminate_session(SessionId=session['SessionId'])
-        time.sleep(2)  # Ensure the session is terminated before starting a new one
+        time.sleep(2)
 
-    # Now attempt to start a new SSM port forwarding session
     port_forwarding_session_started = start_ssm_port_forwarding_session(ssm, instance_id, awsregion, REMOTE_PORT_NUMBER, LOCAL_PORT_NUMBER)
     logging.info(f"SSM port forwarding session started: {port_forwarding_session_started}")
 
-    return shell_session_started and port_forwarding_session_started
+    return port_forwarding_session_started
 
 def is_ssm_agent_configured(ssm, instance_id: str) -> bool:
     try:
@@ -247,46 +246,50 @@ def is_ssm_agent_configured(ssm, instance_id: str) -> bool:
         return bool(response['InstanceInformationList'])
     except ClientError as e:
         logging.error(f"ClientError occurred while checking SSM agent configuration: {e}")
-        return False
+        raise
 
-def start_ssm_shell_session(ssm, instance_id: str, awsregion: str) -> bool:
+def start_ssm_shell_session(ssm, instance_id: str, awsregion: str) -> subprocess.Popen:
     logging.info("Attempting to start an SSM shell session...")
     shell_session_command = [
         "aws", "ssm", "start-session",
         "--target", instance_id,
         "--region", awsregion
     ]
+
     try:
-        result = subprocess.run(shell_session_command)  
-
-        if result.returncode != 0:
-            logging.error(f"Failed to start SSM session: {result.stderr}")
-            return False
-
+        process = subprocess.Popen(shell_session_command)
         logging.info(f"SSM session started successfully.")
-        return True
-
-    except subprocess.TimeoutExpired:
-        logging.error("SSM session command timed out.")
-        return False
-
-    except subprocess.CalledProcessError as e:
-        logging.error(f"An error occurred while starting the SSM session: {e}")
-        return False
-
+        return process
     except Exception as e:
         logging.error(f"An unexpected error occurred: {e}")
-        return False
+        return None
 
-def handle_output(process):
+
+def handle_output(process, ready_event):
     try:
-        stdout, stderr = process.communicate()
-        if process.returncode != 0:
-            logging.error(f"Error starting port forwarding session: {stderr.decode()}")
-        else:
-            logging.info(f"Port forwarding session started: {stdout.decode()}")
+        while True:
+            output = process.stdout.readline().decode().strip()
+            if output == '' and process.poll() is not None:
+                break
+            if output:
+                if "Waiting for connections..." in output:
+                    logging.info("Port forwarding session is ready.")
+                    ready_event.set()
+                elif "Starting session with SessionId:" in output:
+                    session_id = output.split(":")[1].strip()
+                    logging.info(f"Port forwarding session {session_id} has started.")
+                elif "Port opened for sessionId" in output:
+                    port, session_id = output.split("opened for sessionId")
+                    logging.info(f"Port {port.strip()} opened for session {session_id.strip()}.")
+                elif "Exiting session with sessionId:" in output:
+                    session_id = output.split(":")[1].strip()
+                    logging.info(f"Port forwarding session {session_id} has ended.")
+                else:
+                    logging.info(f"Port forwarding session output: {output}")
     except Exception as e:
         logging.error(f"An error occurred while handling the process output: {e}")
+        logging.error("Terminating the port forwarding session due to the error.")
+        process.terminate()
 
 def start_ssm_port_forwarding_session(ssm, instance_id: str, awsregion: str, remote_port: str, local_port: str) -> subprocess.Popen:
     logging.info("Attempting to start an SSM port forwarding session in the background...")
@@ -300,7 +303,7 @@ def start_ssm_port_forwarding_session(ssm, instance_id: str, awsregion: str, rem
     try:
         process = subprocess.Popen(port_forwarding_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         # Start a new thread to handle the process's output
-        threading.Thread(target=handle_output, args=(process,)).start()
+        threading.Thread(target=handle_output, args=(process, ready_event)).start()
         return process
     except subprocess.SubprocessError as e:
         logging.error(f"An error occurred while starting the SSM port forwarding session: {e}")
@@ -309,17 +312,12 @@ def start_ssm_port_forwarding_session(ssm, instance_id: str, awsregion: str, rem
         logging.error(f"An unexpected error occurred while starting the SSM port forwarding session: {e}")
         return None
     
-def terminate_ssm_session(ssm, instance_id: str, awsregion: str) -> None:
+def terminate_ssm_session(ssm, session_id: str) -> None:
     try:
-        response = ssm.describe_sessions(
-            State='Active', Filters=[{'key': 'Target', 'value': instance_id}]
-        )
-        sessions = response.get('Sessions', [])
-        for session in sessions:
-            ssm.terminate_session(SessionId=session['SessionId'])
-            logging.info(f"Terminated SSM session {session['SessionId']}")
+        ssm.terminate_session(SessionId=session_id)
+        logging.info(f"Terminated SSM session {session_id}")
     except ClientError as e:
-        logging.error(f"Error terminating SSM session: {e}")
+        logging.error(f"Error terminating SSM session {session_id}: {e}")
 
 def main() -> None:
     try:
@@ -371,7 +369,7 @@ def main() -> None:
                 else:
                     logging.error(f"Failed to create instance: {e}")
                 return
-
+            
         # Start the SSM port forwarding session in the background
         if REMOTE_PORT_NUMBER and LOCAL_PORT_NUMBER:
             logging.info("About to start the SSM port forwarding session...")
@@ -381,15 +379,18 @@ def main() -> None:
                 return
             else:
                 logging.info("SSM port forwarding session started successfully.")
-
             # Give the port forwarding session a moment to start
-            time.sleep(2)
+            time.sleep(3)
 
         # Start the SSM shell session
         logging.info("About to start the SSM shell session...")
-        if not start_ssm_shell_session(ssm, instance_id, awsregion):
+        shell_session_process = start_ssm_shell_session(ssm, instance_id, awsregion)
+        if shell_session_process is None:
             logging.error("Unable to start the SSM shell session. Exiting.")
             return
+
+        # Wait for the shell session to finish
+        shell_session_process.wait()
 
         if REMOTE_PORT_NUMBER and LOCAL_PORT_NUMBER:
             try:
