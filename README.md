@@ -1,6 +1,6 @@
 # EC2 Instance Starter
 
-This script is designed to start an Amazon EC2 instance based on a predefined launch template and establish a connection to it.
+This script is designed to start an Amazon EC2 instance based on a predefined launch template using boto3, establish a shell connection to it, and set up port forwarding. It's particularly useful for running private generative AI servers, like Stable Diffusion, in the cloud, which you can then access locally through the port forwarding feature.
 
 ## Getting Started
 

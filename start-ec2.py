@@ -170,6 +170,7 @@ def check_existing_ssm(ssm, instance_id: str, awsregion: str) -> dict:
     except ClientError as e:
         logging.error(f"Error checking for existing SSM sessions: {e}")
         return {'shell_sessions': [], 'port_forwarding_sessions': []}
+    
 def initiate_ssm_session(ssm, instance_id: str, awsregion: str) -> bool:
     logging.info("SSM agent is correctly configured. Attempting to start session...")
 
@@ -399,7 +400,19 @@ def main() -> None:
         except Exception as e:
             logging.error(f"An unexpected error occurred: {e}")
         finally:
-            # Any additional cleanup can go here
+            try:
+                logging.info("Terminating SSM sessions...")
+                response = ssm.describe_sessions(
+                    State='Active', Filters=[{'key': 'Target', 'value': instance_id}]
+                )
+                sessions = response.get('Sessions', [])
+                for session in sessions:
+                    ssm.terminate_session(SessionId=session['SessionId'])
+                    logging.info(f"Terminated SSM session {session['SessionId']}")
+            except Exception as e:
+                logging.error(f"Failed to terminate SSM sessions: {e}")
+
+            logging.info("Script execution finished.")
             pass
     except Exception as e:
         logging.error(f"An unexpected error occurred in main: {e}")
