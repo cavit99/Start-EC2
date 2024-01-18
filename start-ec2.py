@@ -425,6 +425,12 @@ def start_ssm_sessions(ssm, instance_id, aws_region):
 
     return shell_session_process, port_forwarding_process
 
+def cleanup(port_forwarding_process, shell_session_process, ssm, instance_id):
+    if port_forwarding_process:
+        terminate_port_forwarding_session(port_forwarding_process, ssm, instance_id)
+    if shell_session_process:
+        shell_session_process.terminate()  # Terminate the shell session process
+
 def main() -> None:
     shell_session_process = None
     port_forwarding_process = None
@@ -447,17 +453,12 @@ def main() -> None:
 
     except KeyboardInterrupt:
         logging.info("Script interrupted by user. Cleaning up...")
-        if port_forwarding_process:
-            terminate_port_forwarding_session(port_forwarding_process, ssm, instance_id)
-        if shell_session_process:
-            shell_session_process.terminate()  # Terminate the shell session process
+        cleanup(port_forwarding_process, shell_session_process, ssm, instance_id)
         sys.exit(0)
     except Exception as e:
         logging.error(f"An unexpected error occurred in main: {e}")
     finally:
-        if port_forwarding_process:
-            terminate_port_forwarding_session(port_forwarding_process, ssm, instance_id)
-        # Add any other cleanup code here if necessary
+        cleanup(port_forwarding_process, shell_session_process, ssm, instance_id)
 
 if __name__ == "__main__":
     main()
