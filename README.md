@@ -41,6 +41,16 @@ python start_ec2.py
 
 Follow the prompts to select your launch template and start the instance.
 
+## Threading Logic
+
+This script uses Python's threading module to handle the output of the SSM port forwarding session in real-time. This is achieved by creating a secondary thread that runs alongside the main thread.
+
+1. Main Thread: This is the primary thread that runs the main function and controls the overall flow of the script.
+
+2. Secondary Thread: This thread is created to handle the output of the SSM port forwarding session in real-time. It runs a function called handle_output, which reads the output line by line and logs it. It also sets an event when the port forwarding session is ready.
+
+This threading logic allows the script to handle the output of the port forwarding session in real-time without blocking the main thread. It follows good practices such as separation of concerns, non-blocking I/O, error handling, and thread safety.
+
 ## Recommended Launch Template User Data
 ```sh
 #!/bin/bash
