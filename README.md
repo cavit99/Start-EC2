@@ -1,6 +1,29 @@
 # EC2 Instance Starter
 
-This repository contains a Python script that automates the process of initializing an Amazon EC2 instance from a specified launch template. Utilizing the boto3 library, the script not only starts the instance but also establishes a secure shell (SSH) connection and configures port forwarding. This functionality is especially beneficial for deploying and managing private generative AI servers, such as Stable Diffusion, on the AWS cloud infrastructure. By leveraging port forwarding, users can interact with their cloud-based AI servers as if they were running locally.
+# AWS EC2 Instance Initialization and Secure Connection via AWS SSM
+
+This repository contains a Python script for automating the initialization of Amazon EC2 spot instances, providing a cost-effective solution with potential savings of up to 80% compared to on-demand prices. The script leverages the boto3 library to launch instances from a pre-existing Amazon Machine Image (AMI) using a user-defined launch template. It's particularly useful for setting up private generative AI servers, such as Stable Diffusion, while also offering significant cost savings.
+
+## Key Features
+
+- **Secure Connection via AWS Systems Manager (SSM)**: The script sets up a secure connection using AWS SSM, eliminating the need for traditional SSH keys and AWS security groups. This feature enhances security and simplifies access management.
+
+- **Port Forwarding Configuration**: The script can configure port forwarding, allowing seamless interaction with AI servers as if they were local. This feature is especially beneficial for developers needing a local-like environment for testing and deployment.
+
+- **Flexible Network Design**: The script supports the creation of a highly secure instance within a private Virtual Private Cloud (VPC) without an internet gateway using AWS PrivateLink. However, this is optional, and users can choose to have their instance within a VPC that includes an internet gateway if they prefer.
+
+- **Optional Use of AWS PrivateLink**: AWS PrivateLink usage is optional and can be customized to meet specific security and connectivity requirements. This feature enables private service access even in environments without direct internet access.
+
+Please refer to the documentation for detailed instructions on how to use the script and customize its features to suit your needs.
+
+Sources
+[1] Connect using EC2 Instance Connect https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-connect-methods.html
+[2] Troubleshoot connecting to your instance https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/TroubleshootingInstancesConnecting.html
+[3] Connect to your Linux instance with EC2 Instance Connect https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/connect-linux-inst-eic.html
+[4] Install EC2 Instance Connect on your EC2 instances https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-connect-set-up.html
+[5] Security in Amazon EC2 https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-security.html
+
+By Perplexity at https://www.perplexity.ai/search/30ae620b-b6a8-4655-af6c-0e4d50d735b2.
 
 ## Getting Started
 
