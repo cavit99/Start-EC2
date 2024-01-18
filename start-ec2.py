@@ -373,16 +373,17 @@ def main() -> None:
                 return
 
         # Start the SSM port forwarding session in the background
-        logging.info("About to start the SSM port forwarding session...")
-        port_forwarding_process = start_ssm_port_forwarding_session(ssm, instance_id, awsregion, REMOTE_PORT_NUMBER, LOCAL_PORT_NUMBER)
-        if port_forwarding_process is None:
-            logging.error("Unable to start the SSM port forwarding session. Exiting.")
-            return
-        else:
-            logging.info("SSM port forwarding session started successfully.")
+        if REMOTE_PORT_NUMBER and LOCAL_PORT_NUMBER:
+            logging.info("About to start the SSM port forwarding session...")
+            port_forwarding_process = start_ssm_port_forwarding_session(ssm, instance_id, awsregion, REMOTE_PORT_NUMBER, LOCAL_PORT_NUMBER)
+            if port_forwarding_process is None:
+                logging.error("Unable to start the SSM port forwarding session. Exiting.")
+                return
+            else:
+                logging.info("SSM port forwarding session started successfully.")
 
-        # Give the port forwarding session a moment to start
-        time.sleep(2)
+            # Give the port forwarding session a moment to start
+            time.sleep(2)
 
         # Start the SSM shell session
         logging.info("About to start the SSM shell session...")
@@ -390,30 +391,31 @@ def main() -> None:
             logging.error("Unable to start the SSM shell session. Exiting.")
             return
 
-        try:
-            # Terminate the port forwarding session
-            port_forwarding_process.terminate()
-            port_forwarding_process.wait(timeout=5)
-            logging.info("SSM port forwarding session terminated successfully.")
-        except subprocess.TimeoutExpired:
-            logging.error("Port forwarding session did not terminate in a timely manner.")
-        except Exception as e:
-            logging.error(f"An unexpected error occurred: {e}")
-        finally:
+        if REMOTE_PORT_NUMBER and LOCAL_PORT_NUMBER:
             try:
-                logging.info("Terminating SSM sessions...")
-                response = ssm.describe_sessions(
-                    State='Active', Filters=[{'key': 'Target', 'value': instance_id}]
-                )
-                sessions = response.get('Sessions', [])
-                for session in sessions:
-                    ssm.terminate_session(SessionId=session['SessionId'])
-                    logging.info(f"Terminated SSM session {session['SessionId']}")
+                # Terminate the port forwarding session
+                port_forwarding_process.terminate()
+                port_forwarding_process.wait(timeout=5)
+                logging.info("SSM port forwarding session terminated successfully.")
+            except subprocess.TimeoutExpired:
+                logging.error("Port forwarding session did not terminate in a timely manner.")
             except Exception as e:
-                logging.error(f"Failed to terminate SSM sessions: {e}")
+                logging.error(f"An unexpected error occurred: {e}")
+            finally:
+                try:
+                    logging.info("Terminating SSM sessions...")
+                    response = ssm.describe_sessions(
+                        State='Active', Filters=[{'key': 'Target', 'value': instance_id}]
+                    )
+                    sessions = response.get('Sessions', [])
+                    for session in sessions:
+                        ssm.terminate_session(SessionId=session['SessionId'])
+                        logging.info(f"Terminated SSM session {session['SessionId']}")
+                except Exception as e:
+                    logging.error(f"Failed to terminate SSM sessions: {e}")
 
-            logging.info("Script execution finished.")
-            pass
+                logging.info("Script execution finished.")
+
     except Exception as e:
         logging.error(f"An unexpected error occurred in main: {e}")
 
