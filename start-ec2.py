@@ -212,7 +212,6 @@ def initiate_ssm_session(ssm, instance_id: str, awsregion: str) -> bool:
         logging.error(f"An unexpected error occurred: {e}")
         return False
         
-# Improved ensure_ssm_session function
 def ensure_ssm_session(ssm, instance_id: str, awsregion: str) -> bool:
     existing_sessions = check_existing_ssm(ssm, instance_id, awsregion)
     
@@ -319,103 +318,133 @@ def terminate_ssm_session(ssm, session_id: str) -> None:
     except ClientError as e:
         logging.error(f"Error terminating SSM session {session_id}: {e}")
 
+def terminate_port_forwarding_session(port_forwarding_process, ssm, instance_id):
+    try:
+        # Terminate the port forwarding session
+        port_forwarding_process.terminate()
+        port_forwarding_process.wait(timeout=5)
+        logging.info("SSM port forwarding session terminated successfully.")
+    except subprocess.TimeoutExpired:
+        logging.error("Port forwarding session did not terminate in a timely manner.")
+    except Exception as e:
+        logging.error(f"An unexpected error occurred: {e}")
+    finally:
+        try:
+            logging.info("Terminating SSM sessions...")
+            response = ssm.describe_sessions(
+                State='Active', Filters=[{'key': 'Target', 'value': instance_id}]
+            )
+            sessions = response.get('Sessions', [])
+            for session in sessions:
+                ssm.terminate_session(SessionId=session['SessionId'])
+                logging.info(f"Terminated SSM session {session['SessionId']}")
+        except Exception as e:
+            logging.error(f"Failed to terminate SSM sessions: {e}")
+
+        logging.info("Script execution finished.")
+
+def get_aws_session() -> boto3.Session:
+    if not is_connected():
+        logging.error("No internet connection. Please check your connection and try again.")
+        return None
+
+    session = is_aws_configured()
+    if session is None:
+        logging.error("AWS is not configured. Please enter your AWS credentials.")
+        return None
+
+    logging.info("AWS credentials are configured, proceeding.")
+    return session
+
+def get_ec2_resources(session, awsregion):
+    # Create a Config object with custom settings
+    custom_config = botocore.config.Config(
+        read_timeout=900,
+        connect_timeout=900,
+        retries={'max_attempts': 0}
+    )
+
+    ec2_resource = session.resource('ec2', region_name=awsregion, config=custom_config)
+    ec2_client = session.client('ec2', region_name=awsregion, config=custom_config)
+    ssm = session.client('ssm', region_name=awsregion, config=custom_config)
+
+    return ec2_resource, ec2_client, ssm
+
+def get_instance(ec2_resource, ec2_client, launch_template_id, awstagvalue):
+    if not does_launch_template_exist(ec2_client, launch_template_id):
+        logging.error(f"Launch template {launch_template_id} does not exist. Exiting.")
+        return None
+
+    existing_instance_id = get_instance_id(ec2_resource, awstagvalue)
+
+    if existing_instance_id:
+        logging.info(f"An instance with tag value '{awstagvalue}' exists. Instance ID: {existing_instance_id}")
+        try:
+            start_instance_if_stopped(ec2_resource, ec2_client, existing_instance_id)
+        except ClientError as e:
+            if 'UnauthorizedOperation' in str(e):
+                logging.error("You do not have the necessary permissions to start instances. Please check your IAM policies.")
+            else:
+                logging.error(f"Failed to start instance: {e}")
+            return None
+        instance_id = existing_instance_id
+    else:
+        try:
+            instance_id = run_instance(ec2_resource, ec2_client, launch_template_id)
+        except ClientError as e:
+            if 'UnauthorizedOperation' in str(e):
+                logging.error("You do not have the necessary permissions to create instances. Please check your IAM policies.")
+            else:
+                logging.error(f"Failed to create instance: {e}")
+            return None
+    return instance_id
+
+def start_ssm_sessions(ssm, instance_id, awsregion):
+    port_forwarding_process = None  # Initialize the variable at the start of the function
+
+    # Start the SSM port forwarding session in the background
+    if REMOTE_PORT_NUMBER and LOCAL_PORT_NUMBER:
+        if port_forwarding_process is not None:  # Check if the variable is not None before using it
+            terminate_port_forwarding_session(port_forwarding_process, ssm, instance_id)
+        logging.info("About to start the SSM port forwarding session...")
+        port_forwarding_process = start_ssm_port_forwarding_session(ssm, instance_id, awsregion, REMOTE_PORT_NUMBER, LOCAL_PORT_NUMBER)
+        if port_forwarding_process is None:
+            logging.error("Unable to start the SSM port forwarding session. Exiting.")
+            return None, None
+        else:
+            logging.info("SSM port forwarding session started successfully.")
+        # Give the port forwarding session a moment to start
+        time.sleep(3)
+
+    # Start the SSM shell session
+    logging.info("About to start the SSM shell session...")
+    shell_session_process = start_ssm_shell_session(ssm, instance_id, awsregion)
+    if shell_session_process is None:
+        logging.error("Unable to start the SSM shell session. Exiting.")
+        return None, None
+
+    return shell_session_process, port_forwarding_process
+
 def main() -> None:
     try:
-        if not is_connected():
-            logging.error("No internet connection. Please check your connection and try again.")
-            return
-        
-        session = is_aws_configured()
+        session = get_aws_session()
         if session is None:
-            logging.error("AWS is not configured. Please enter your AWS credentials.")
-            return
-        
-        logging.info("AWS credentials are configured, proceeding.")
-
-        # Create a Config object with custom settings
-        custom_config = botocore.config.Config(
-            read_timeout=900,
-            connect_timeout=900,
-            retries={'max_attempts': 0}
-        )
-
-        ec2_resource = session.resource('ec2', region_name=awsregion, config=custom_config)
-        ec2_client = session.client('ec2', region_name=awsregion, config=custom_config)
-        ssm = session.client('ssm', region_name=awsregion, config=custom_config)
-
-        if not does_launch_template_exist(ec2_client, LAUNCH_TEMPLATE_ID):
-            logging.error(f"Launch template {LAUNCH_TEMPLATE_ID} does not exist. Exiting.")
             return
 
-        existing_instance_id = get_instance_id(ec2_resource, awstagvalue)
+        ec2_resource, ec2_client, ssm = get_ec2_resources(session, awsregion)
+        instance_id = get_instance(ec2_resource, ec2_client, LAUNCH_TEMPLATE_ID, awstagvalue)
+        if instance_id is None:
+            return
 
-        if existing_instance_id:
-            logging.info(f"An instance with tag value '{awstagvalue}' exists. Instance ID: {existing_instance_id}")
-            try:
-                start_instance_if_stopped(ec2_resource, ec2_client, existing_instance_id)
-            except ClientError as e:
-                if 'UnauthorizedOperation' in str(e):
-                    logging.error("You do not have the necessary permissions to start instances. Please check your IAM policies.")
-                else:
-                    logging.error(f"Failed to start instance: {e}")
-                return
-            instance_id = existing_instance_id
-        else:
-            try:
-                instance_id = run_instance(ec2_resource, ec2_client, LAUNCH_TEMPLATE_ID)
-            except ClientError as e:
-                if 'UnauthorizedOperation' in str(e):
-                    logging.error("You do not have the necessary permissions to create instances. Please check your IAM policies.")
-                else:
-                    logging.error(f"Failed to create instance: {e}")
-                return
-            
-        # Start the SSM port forwarding session in the background
-        if REMOTE_PORT_NUMBER and LOCAL_PORT_NUMBER:
-            logging.info("About to start the SSM port forwarding session...")
-            port_forwarding_process = start_ssm_port_forwarding_session(ssm, instance_id, awsregion, REMOTE_PORT_NUMBER, LOCAL_PORT_NUMBER)
-            if port_forwarding_process is None:
-                logging.error("Unable to start the SSM port forwarding session. Exiting.")
-                return
-            else:
-                logging.info("SSM port forwarding session started successfully.")
-            # Give the port forwarding session a moment to start
-            time.sleep(3)
-
-        # Start the SSM shell session
-        logging.info("About to start the SSM shell session...")
-        shell_session_process = start_ssm_shell_session(ssm, instance_id, awsregion)
+        shell_session_process, port_forwarding_process = start_ssm_sessions(ssm, instance_id, awsregion)
         if shell_session_process is None:
-            logging.error("Unable to start the SSM shell session. Exiting.")
             return
 
         # Wait for the shell session to finish
         shell_session_process.wait()
 
-        if REMOTE_PORT_NUMBER and LOCAL_PORT_NUMBER:
-            try:
-                # Terminate the port forwarding session
-                port_forwarding_process.terminate()
-                port_forwarding_process.wait(timeout=5)
-                logging.info("SSM port forwarding session terminated successfully.")
-            except subprocess.TimeoutExpired:
-                logging.error("Port forwarding session did not terminate in a timely manner.")
-            except Exception as e:
-                logging.error(f"An unexpected error occurred: {e}")
-            finally:
-                try:
-                    logging.info("Terminating SSM sessions...")
-                    response = ssm.describe_sessions(
-                        State='Active', Filters=[{'key': 'Target', 'value': instance_id}]
-                    )
-                    sessions = response.get('Sessions', [])
-                    for session in sessions:
-                        ssm.terminate_session(SessionId=session['SessionId'])
-                        logging.info(f"Terminated SSM session {session['SessionId']}")
-                except Exception as e:
-                    logging.error(f"Failed to terminate SSM sessions: {e}")
-
-                logging.info("Script execution finished.")
+        if port_forwarding_process is not None:
+            terminate_port_forwarding_session(port_forwarding_process, ssm, instance_id)
 
     except Exception as e:
         logging.error(f"An unexpected error occurred in main: {e}")
