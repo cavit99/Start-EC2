@@ -1,6 +1,7 @@
 # EC2 Instance Starter
 
 This script is designed to start an Amazon EC2 instance based on a predefined launch template using boto3, establish a shell connection to it, and set up port forwarding. It's particularly useful for running private generative AI servers, like Stable Diffusion, in the cloud, which you can then access locally through the port forwarding feature.
+I couldn't find a good pre-existing solution working with python/boto3, so I wrote mine. It means I can spin up my server very efficiently.
 
 ## Getting Started
 
@@ -39,8 +40,19 @@ Run the script
 python start_ec2.py
 ```
 
-
 Follow the prompts to select your launch template and start the instance.
+
+## Recommended Launch Template User Data
+```sh
+#!/bin/bash
+sudo apt-get update
+cd /home/ubuntu/stable-diffusion-webui && git rev-parse --is-inside-work-tree > /dev/null 2>&1 && git pull
+cd /home/ubuntu/kohya_ss && git rev-parse --is-inside-work-tree > /dev/null 2>&1 && git pull
+cd /home/ubuntu/ComfyUI && git rev-parse --is-inside-work-tree > /dev/null 2>&1 && git pull
+find /home/ubuntu/stable-diffusion-webui/extensions -maxdepth 2 -type d -exec sh -c 'cd {} && git rev-parse --is-inside-work-tree > /dev/null 2>&1 && git pull' \;
+find /home/ubuntu/ComfyUI/custom_nodes -maxdepth 2 -type d -exec sh -c 'cd {} && git rev-parse --is-inside-work-tree > /dev/null 2>&1 && git pull' \;
+nohup fio --filename=/dev/nvme0n1 --rw=read --bs=1M --iodepth=32 --ioengine=libaio --direct=1 --name=volume-initialize &
+```
 
 ## Contributing
 
