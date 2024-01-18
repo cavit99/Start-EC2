@@ -94,11 +94,20 @@ def does_launch_template_exist(ec2_client, launch_template_id: str) -> bool:
 def run_instance(ec2_resource, ec2_client, launch_template_id: str) -> str:
     logging.info("Creating a new instance...")
 
-    instance = ec2_resource.create_instances(
-        LaunchTemplate={'LaunchTemplateId': launch_template_id},
-        MaxCount=1,
-        MinCount=1
-    )[0]
+    try:
+        instance = ec2_resource.create_instances(
+            LaunchTemplate={'LaunchTemplateId': launch_template_id},
+            MaxCount=1,
+            MinCount=1
+        )[0]
+    except botocore.exceptions.ClientError as e:
+        if e.response['Error']['Code'] == 'InvalidLaunchTemplateId.NotFound':
+            logging.error(f"Launch template {launch_template_id} does not exist: {e}")
+            return None
+        else:
+            logging.error(f"An unexpected error occurred: {e}")
+            return None
+
     logging.info(f"Waiting for instance {instance.id} to start...")
     instance.wait_until_running()
     logging.info(f"Instance {instance.id} is now running. Waiting for initialization...")
