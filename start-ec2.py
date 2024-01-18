@@ -61,16 +61,6 @@ def is_connected():
     except requests.exceptions.RequestException:
         return False
 
-def is_aws_configured() -> boto3.Session:
-    try:
-        session = boto3.Session()
-        credentials = session.get_credentials()
-        if credentials is None:
-            return None
-        return session
-    except NoCredentialsError:
-        return None
- 
 def does_launch_template_exist(ec2_client, launch_template_id: str) -> bool:
     try:
         response = ec2_client.describe_launch_templates(
@@ -359,8 +349,9 @@ def get_aws_session() -> boto3.Session:
         logging.error("No internet connection. Please check your connection and try again.")
         return None
 
-    session = is_aws_configured()
-    if session is None:
+    try:
+        session = boto3.Session()
+    except NoCredentialsError:
         logging.error("AWS is not configured. Please enter your AWS credentials.")
         return None
 
