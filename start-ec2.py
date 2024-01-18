@@ -36,15 +36,15 @@ except FileNotFoundError:
 LAUNCH_TEMPLATE_ID = config['template']
 REMOTE_PORT_NUMBER = config['remote_port']
 LOCAL_PORT_NUMBER = config['local_port']
-awsregion = config['region']
-awstagvalue = config['tag_value']
+aws_region = config['region']
+aws_tag_value = config['tag_value']
 
 
 logging.info(f"Using Launch Template ID: {LAUNCH_TEMPLATE_ID}")
 logging.info(f"Using Remote Port Number: {REMOTE_PORT_NUMBER}")
 logging.info(f"Using Local Port Number: {LOCAL_PORT_NUMBER}")
-logging.info(f"Using AWS region: {awsregion}")
-logging.info(f"Using AWS tag value: {awstagvalue}")
+logging.info(f"Using AWS region: {aws_region}")
+logging.info(f"Using AWS tag value: {aws_tag_value}")
 
 confirmation = input("Press Enter to continue or type q to exit: ")
 if confirmation:
@@ -111,7 +111,7 @@ def run_instance(ec2_resource, ec2_client, launch_template_id: str) -> str:
     
     return instance.id
 
-def get_instance_id(ec2_resource, name_tag: str) -> str:
+def get_instance_id_by_tag(ec2_resource, name_tag: str) -> str:
     instances = ec2_resource.instances.filter(
         Filters=[
             {'Name': 'tag:Name', 'Values': [name_tag]},
@@ -136,7 +136,7 @@ def start_instance_if_stopped(ec2_resource, ec2_client, instance_id: str) -> Non
         wait_for_instance(ec2_client, instance_id, 'instance_status_ok')
         wait_for_instance(ec2_client, instance_id, 'system_status_ok')
 
-def check_existing_ssm(ssm, instance_id: str, awsregion: str) -> dict:
+def check_existing_ssm(ssm, instance_id: str, aws_region: str) -> dict:
     try:
         response = ssm.describe_sessions(
             Filters=[
@@ -167,7 +167,7 @@ def check_existing_ssm(ssm, instance_id: str, awsregion: str) -> dict:
         logging.error(f"Error checking for existing SSM sessions: {e}")
         return {'shell_sessions': [], 'port_forwarding_sessions': []}
     
-def initiate_ssm_session(ssm, instance_id: str, awsregion: str) -> bool:
+def initiate_ssm_session(ssm, instance_id: str, aws_region: str) -> bool:
     logging.info("SSM agent is correctly configured. Attempting to start session...")
 
     # Check if AWS CLI is installed
@@ -183,7 +183,7 @@ def initiate_ssm_session(ssm, instance_id: str, awsregion: str) -> bool:
         "--target",
         instance_id,
         "--region",
-        awsregion
+        aws_region
     ]
 
     logging.info(f"Running command: {' '.join(start_session_command)}")
@@ -212,8 +212,8 @@ def initiate_ssm_session(ssm, instance_id: str, awsregion: str) -> bool:
         logging.error(f"An unexpected error occurred: {e}")
         return False
         
-def ensure_ssm_session(ssm, instance_id: str, awsregion: str) -> bool:
-    existing_sessions = check_existing_ssm(ssm, instance_id, awsregion)
+def ensure_ssm_session(ssm, instance_id: str, aws_region: str) -> bool:
+    existing_sessions = check_existing_ssm(ssm, instance_id, aws_region)
     
     if existing_sessions['shell_sessions']:
         logging.info(f"Terminating active SSM shell session for instance {instance_id}...")
@@ -221,7 +221,7 @@ def ensure_ssm_session(ssm, instance_id: str, awsregion: str) -> bool:
             ssm.terminate_session(SessionId=session['SessionId'])
         time.sleep(2)
 
-    shell_session_started = start_ssm_shell_session(ssm, instance_id, awsregion)
+    shell_session_started = start_ssm_shell_session(ssm, instance_id, aws_region)
     logging.info(f"SSM shell session started: {shell_session_started}")
     if not shell_session_started:
         return False
@@ -232,7 +232,7 @@ def ensure_ssm_session(ssm, instance_id: str, awsregion: str) -> bool:
             ssm.terminate_session(SessionId=session['SessionId'])
         time.sleep(2)
 
-    port_forwarding_session_started = start_ssm_port_forwarding_session(ssm, instance_id, awsregion, REMOTE_PORT_NUMBER, LOCAL_PORT_NUMBER)
+    port_forwarding_session_started = start_ssm_port_forwarding_session(ssm, instance_id, aws_region, REMOTE_PORT_NUMBER, LOCAL_PORT_NUMBER)
     logging.info(f"SSM port forwarding session started: {port_forwarding_session_started}")
 
     return port_forwarding_session_started
@@ -247,12 +247,12 @@ def is_ssm_agent_configured(ssm, instance_id: str) -> bool:
         logging.error(f"ClientError occurred while checking SSM agent configuration: {e}")
         raise
 
-def start_ssm_shell_session(ssm, instance_id: str, awsregion: str) -> subprocess.Popen:
+def start_ssm_shell_session(ssm, instance_id: str, aws_region: str) -> subprocess.Popen:
     logging.info("Attempting to start an SSM shell session...")
     shell_session_command = [
         "aws", "ssm", "start-session",
         "--target", instance_id,
-        "--region", awsregion
+        "--region", aws_region
     ]
 
     try:
@@ -290,12 +290,12 @@ def handle_output(process, ready_event):
         logging.error("Terminating the port forwarding session due to the error.")
         process.terminate()
 
-def start_ssm_port_forwarding_session(ssm, instance_id: str, awsregion: str, remote_port: str, local_port: str) -> subprocess.Popen:
+def start_ssm_port_forwarding_session(ssm, instance_id: str, aws_region: str, remote_port: str, local_port: str) -> subprocess.Popen:
     logging.info("Attempting to start an SSM port forwarding session in the background...")
     port_forwarding_command = [
         "aws", "ssm", "start-session",
         "--target", instance_id,
-        "--region", awsregion,
+        "--region", aws_region,
         "--document-name", "AWS-StartPortForwardingSession",
         "--parameters", f"portNumber={remote_port},localPortNumber={local_port}"
     ]
@@ -356,7 +356,7 @@ def get_aws_session() -> boto3.Session:
     logging.info("AWS credentials are configured, proceeding.")
     return session
 
-def get_ec2_resources(session, awsregion):
+def get_ec2_resources(session, aws_region):
     # Create a Config object with custom settings
     custom_config = botocore.config.Config(
         read_timeout=900,
@@ -364,21 +364,21 @@ def get_ec2_resources(session, awsregion):
         retries={'max_attempts': 0}
     )
 
-    ec2_resource = session.resource('ec2', region_name=awsregion, config=custom_config)
-    ec2_client = session.client('ec2', region_name=awsregion, config=custom_config)
-    ssm = session.client('ssm', region_name=awsregion, config=custom_config)
+    ec2_resource = session.resource('ec2', region_name=aws_region, config=custom_config)
+    ec2_client = session.client('ec2', region_name=aws_region, config=custom_config)
+    ssm = session.client('ssm', region_name=aws_region, config=custom_config)
 
     return ec2_resource, ec2_client, ssm
 
-def get_instance(ec2_resource, ec2_client, launch_template_id, awstagvalue):
+def get_instance(ec2_resource, ec2_client, launch_template_id, aws_tag_value):
     if not does_launch_template_exist(ec2_client, launch_template_id):
         logging.error(f"Launch template {launch_template_id} does not exist. Exiting.")
         return None
 
-    existing_instance_id = get_instance_id(ec2_resource, awstagvalue)
+    existing_instance_id = get_instance_id_by_tag(ec2_resource, aws_tag_value)
 
     if existing_instance_id:
-        logging.info(f"An instance with tag value '{awstagvalue}' exists. Instance ID: {existing_instance_id}")
+        logging.info(f"An instance with tag value '{aws_tag_value}' exists. Instance ID: {existing_instance_id}")
         try:
             start_instance_if_stopped(ec2_resource, ec2_client, existing_instance_id)
         except ClientError as e:
@@ -399,7 +399,7 @@ def get_instance(ec2_resource, ec2_client, launch_template_id, awstagvalue):
             return None
     return instance_id
 
-def start_ssm_sessions(ssm, instance_id, awsregion):
+def start_ssm_sessions(ssm, instance_id, aws_region):
     port_forwarding_process = None  # Initialize the variable at the start of the function
 
     # Start the SSM port forwarding session in the background
@@ -407,7 +407,7 @@ def start_ssm_sessions(ssm, instance_id, awsregion):
         if port_forwarding_process is not None:  # Check if the variable is not None before using it
             terminate_port_forwarding_session(port_forwarding_process, ssm, instance_id)
         logging.info("About to start the SSM port forwarding session...")
-        port_forwarding_process = start_ssm_port_forwarding_session(ssm, instance_id, awsregion, REMOTE_PORT_NUMBER, LOCAL_PORT_NUMBER)
+        port_forwarding_process = start_ssm_port_forwarding_session(ssm, instance_id, aws_region, REMOTE_PORT_NUMBER, LOCAL_PORT_NUMBER)
         if port_forwarding_process is None:
             logging.error("Unable to start the SSM port forwarding session. Exiting.")
             return None, None
@@ -418,7 +418,7 @@ def start_ssm_sessions(ssm, instance_id, awsregion):
 
     # Start the SSM shell session
     logging.info("About to start the SSM shell session...")
-    shell_session_process = start_ssm_shell_session(ssm, instance_id, awsregion)
+    shell_session_process = start_ssm_shell_session(ssm, instance_id, aws_region)
     if shell_session_process is None:
         logging.error("Unable to start the SSM shell session. Exiting.")
         return None, None
@@ -426,28 +426,38 @@ def start_ssm_sessions(ssm, instance_id, awsregion):
     return shell_session_process, port_forwarding_process
 
 def main() -> None:
+    shell_session_process = None
+    port_forwarding_process = None
     try:
         session = get_aws_session()
         if session is None:
             return
 
-        ec2_resource, ec2_client, ssm = get_ec2_resources(session, awsregion)
-        instance_id = get_instance(ec2_resource, ec2_client, LAUNCH_TEMPLATE_ID, awstagvalue)
+        ec2_resource, ec2_client, ssm = get_ec2_resources(session, aws_region)
+        instance_id = get_instance(ec2_resource, ec2_client, LAUNCH_TEMPLATE_ID, aws_tag_value)
         if instance_id is None:
             return
 
-        shell_session_process, port_forwarding_process = start_ssm_sessions(ssm, instance_id, awsregion)
+        shell_session_process, port_forwarding_process = start_ssm_sessions(ssm, instance_id, aws_region)
         if shell_session_process is None:
             return
 
         # Wait for the shell session to finish
         shell_session_process.wait()
 
-        if port_forwarding_process is not None:
+    except KeyboardInterrupt:
+        logging.info("Script interrupted by user. Cleaning up...")
+        if port_forwarding_process:
             terminate_port_forwarding_session(port_forwarding_process, ssm, instance_id)
-
+        if shell_session_process:
+            shell_session_process.terminate()  # Terminate the shell session process
+        sys.exit(0)
     except Exception as e:
         logging.error(f"An unexpected error occurred in main: {e}")
+    finally:
+        if port_forwarding_process:
+            terminate_port_forwarding_session(port_forwarding_process, ssm, instance_id)
+        # Add any other cleanup code here if necessary
 
 if __name__ == "__main__":
     main()
