@@ -461,6 +461,14 @@ def main() -> None:
 
         # Wait for the shell session to finish
         shell_session_process.wait()
+        
+        # Ask the user whether to terminate the EC2 instance, default is no
+        terminate = input("Do you want to terminate the EC2 instance? (yes/no, default is no): ")
+        if terminate.lower() == 'yes':
+            ec2_client.terminate_instances(InstanceIds=[instance_id])
+            logging.info(f"Instance {instance_id} is being terminated.")
+        else:
+            logging.info("Instance termination skipped.")
 
     # If the script is interrupted, log the interruption and clean up
     except KeyboardInterrupt:
