@@ -426,10 +426,16 @@ def start_ssm_sessions(ssm, instance_id, aws_region):
     return shell_session_process, port_forwarding_process
 
 def cleanup(port_forwarding_process, shell_session_process, ssm, instance_id):
-    if port_forwarding_process:
-        terminate_port_forwarding_session(port_forwarding_process, ssm, instance_id)
-    if shell_session_process:
-        shell_session_process.terminate()  # Terminate the shell session process
+    try:
+        if port_forwarding_process:
+            terminate_port_forwarding_session(port_forwarding_process, ssm, instance_id)
+    except Exception as e:
+        logging.error(f"Error terminating port forwarding session: {e}")
+    try:
+        if shell_session_process:
+            shell_session_process.terminate()  # Terminate the shell session process
+    except Exception as e:
+        logging.error(f"Error terminating shell session: {e}")
 
 def main() -> None:
     shell_session_process = None
