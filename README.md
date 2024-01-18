@@ -1,7 +1,6 @@
 # EC2 Instance Starter
 
-This script is designed to start an Amazon EC2 instance based on a predefined launch template using boto3, establish a shell connection to it, and set up port forwarding. It's particularly useful for running private generative AI servers, like Stable Diffusion, in the cloud, which you can then access locally through the port forwarding feature.
-I couldn't find a good pre-existing solution working with python/boto3, so I wrote mine. It means I can spin up my server very efficiently.
+This repository contains a Python script that automates the process of initializing an Amazon EC2 instance from a specified launch template. Utilizing the boto3 library, the script not only starts the instance but also establishes a secure shell (SSH) connection and configures port forwarding. This functionality is especially beneficial for deploying and managing private generative AI servers, such as Stable Diffusion, on the AWS cloud infrastructure. By leveraging port forwarding, users can interact with their cloud-based AI servers as if they were running locally.
 
 ## Getting Started
 
