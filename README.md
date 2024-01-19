@@ -12,6 +12,8 @@ This repository contains a Python script for automating the initialization of Am
 
 - **Flexible Network Design**: The script supports the creation of a highly secure instance within a private Virtual Private Cloud (VPC) without an internet gateway using AWS PrivateLink. However, this is optional, and users can choose to have their instance within a VPC that includes an internet gateway if they prefer, without needing to expose any ports to the internet.
 
+- **Automated Updates for User-Defined Applications**: The `config.yaml` file includes a `user_data` section that is executed upon EC2 instance launch. This feature enables automatic updates for repositories, extensions, and ComfyUI custom nodes, among other elements.
+
 ## Getting Started
 
 These instructions will guide you on how to use this script for starting and connecting to an EC2 instance.
@@ -59,9 +61,6 @@ This script uses Python's threading module to handle the output of the SSM port 
 
 2. Secondary Thread: This thread is created to handle the output of the SSM port forwarding session in real-time. It runs a function called handle_output, which reads the output line by line and logs it. It also sets an event when the port forwarding session is ready.
 
-
-
-l
 
 ## Contributing
 
