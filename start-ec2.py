@@ -73,6 +73,7 @@ def get_spot_price(ec2_client):
 
     for spot_price in response['SpotPriceHistory']:
         logging.info(f"Current spot price for {instance_type} in {availability_zone}: {spot_price['SpotPrice']}")
+        return spot_price['SpotPrice']
 
 def is_connected():
     try:
@@ -469,15 +470,24 @@ def main() -> None:
         session = get_aws_session()
         if session is None:
             return
-
+        
         ec2_resource, ec2_client, ssm = get_ec2_resources(session, aws_region)
-
-        # Call get_spot_price() here
+        
         try:
-            get_spot_price(ec2_client)
+            spot_price = get_spot_price(ec2_client)
         except Exception as e:
             logging.error(f"An error occurred while getting the spot price: {e}")
-            return
+            raise SystemExit("An error occurred while getting the spot price.") 
+
+        try:
+            confirmation = input(f"The current spot price is {spot_price}. Do you want to continue? (yes/no): ")
+        except Exception as e:
+            logging.error(f"An error occurred while getting user confirmation: {e}")
+            raise SystemExit("An error occurred while getting user confirmation.") 
+
+        if confirmation.lower() != 'yes':
+            logging.info("User chose not to continue due to the spot price. Exiting...")
+            raise SystemExit("User chose to exit.") 
         
         instance_id = get_instance(ec2_resource, ec2_client, LAUNCH_TEMPLATE_ID, aws_tag_value)
         if instance_id is None:
