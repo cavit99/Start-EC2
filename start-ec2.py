@@ -72,8 +72,8 @@ def get_spot_price(ec2_client):
     )
 
     for spot_price in response['SpotPriceHistory']:
-        print(f"Current spot price for {instance_type} in {availability_zone}: {spot_price['SpotPrice']}")
-        
+        logging.info(f"Current spot price for {instance_type} in {availability_zone}: {spot_price['SpotPrice']}")
+
 def is_connected():
     try:
         requests.get('http://www.google.com', timeout=5)
@@ -471,6 +471,14 @@ def main() -> None:
             return
 
         ec2_resource, ec2_client, ssm = get_ec2_resources(session, aws_region)
+
+        # Call get_spot_price() here
+        try:
+            get_spot_price(ec2_client)
+        except Exception as e:
+            logging.error(f"An error occurred while getting the spot price: {e}")
+            return
+        
         instance_id = get_instance(ec2_resource, ec2_client, LAUNCH_TEMPLATE_ID, aws_tag_value)
         if instance_id is None:
             return
