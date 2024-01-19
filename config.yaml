@@ -2,5 +2,25 @@ template: 'lt-0e096fddfc03f20b6' #put your aws launch template ID
 remote_port: '8188' #leave empty to disable port fowarding
 local_port: '8188' #leave empty to disable port fowarding
 region: 'eu-north-1' 
-tag_value: 'sd'  #note this key 'value', not key 'name'
-
+tag_value: 'sd'  #note this key 'value', NOT key 'name'
+user_data: |
+  #!/bin/bash
+  # Define an array of directories
+  declare -a dirs=(
+      "/home/ubuntu/kohya_ss"
+      "/home/ubuntu/stable-diffusion-webui"
+      "/home/ubuntu/ComfyUI"
+  )
+  # Define log file
+  LOGFILE="/home/ubuntu/git-pull.log"
+  # Loop through the directories
+  for dir in "${dirs[@]}"; do
+      if [ -d "$dir" ]; then
+          if git -C "$dir" rev-parse --is-inside-work-tree > /dev/null 2>&1; then
+              git -C "$dir" pull >> "$LOGFILE" 2>&1
+          fi
+      fi
+  done
+  # Pull updates for extensions and custom nodes
+  find /home/ubuntu/stable-diffusion-webui/extensions -maxdepth 1 -type d -exec sh -c 'cd {} && git rev-parse --is-inside-work-tree > /dev/null 2>&1 && git pull >> /home/ubuntu/git-pull.log 2>&1' \;
+  find /home/ubuntu/ComfyUI/custom_nodes -maxdepth 1 -type d -exec sh -c 'cd {}

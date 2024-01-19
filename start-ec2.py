@@ -28,9 +28,10 @@ logging.basicConfig(
 try:
     with open('config.yaml', 'r') as f:
         config = yaml.safe_load(f)
+        user_data = config['user_data']
 except FileNotFoundError:
     logging.error("Configuration file not found. Please ensure 'config.yaml' exists.")
-    sys.exit()
+    raise SystemExit("Exiting due to missing configuration file.")
 
 # Use the configuration values
 LAUNCH_TEMPLATE_ID = config['template']
@@ -88,7 +89,8 @@ def run_instance(ec2_resource, ec2_client, launch_template_id: str) -> str:
         instance = ec2_resource.create_instances(
             LaunchTemplate={'LaunchTemplateId': launch_template_id},
             MaxCount=1,
-            MinCount=1
+            MinCount=1,
+            UserData=user_data
         )[0]
     except botocore.exceptions.ClientError as e:
         if e.response['Error']['Code'] == 'InvalidLaunchTemplateId.NotFound':
