@@ -506,6 +506,17 @@ def main() -> None:
         if terminate.lower() == 'yes':
             ec2_client.terminate_instances(InstanceIds=[instance_id])
             logging.info(f"Instance {instance_id} is being terminated.")
+
+            # Wait for the instance to be terminated
+            waiter = ec2_client.get_waiter('instance_terminated')
+            waiter.wait(InstanceIds=[instance_id])
+
+            # Verify the instance is terminated
+            response = ec2_client.describe_instances(InstanceIds=[instance_id])
+            if response['Reservations'][0]['Instances'][0]['State']['Name'] == 'terminated':
+                logging.info(f"Instance {instance_id} has been terminated.")
+            else:
+                logging.error(f"Failed to terminate instance {instance_id}.")
         else:
             logging.info("Instance termination skipped.")
 
