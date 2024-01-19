@@ -11,6 +11,7 @@ import time
 import shutil
 import botocore.config
 import threading
+import requests
 
 from botocore.exceptions import NoCredentialsError, ClientError
 
@@ -55,6 +56,24 @@ if confirmation:
 
 ready_event = threading.Event()
 
+def get_instance_metadata():
+    base_url = "http://169.254.169.254/latest/meta-data/"
+    instance_type = requests.get(base_url + "instance-type").text
+    availability_zone = requests.get(base_url + "placement/availability-zone").text
+    return instance_type, availability_zone
+
+def get_spot_price(ec2_client):
+    instance_type, availability_zone = get_instance_metadata()
+    response = ec2_client.describe_spot_price_history(
+        InstanceTypes=[instance_type],
+        ProductDescriptions=['Linux/UNIX'],
+        AvailabilityZone=availability_zone,
+        MaxResults=1
+    )
+
+    for spot_price in response['SpotPriceHistory']:
+        print(f"Current spot price for {instance_type} in {availability_zone}: {spot_price['SpotPrice']}")
+        
 def is_connected():
     try:
         requests.get('http://www.google.com', timeout=5)

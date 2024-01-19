@@ -23,4 +23,4 @@ user_data: |
   done
   # Pull updates for extensions and custom nodes
   find /home/ubuntu/stable-diffusion-webui/extensions -maxdepth 1 -type d -exec sh -c 'cd {} && git rev-parse --is-inside-work-tree > /dev/null 2>&1 && git pull >> /home/ubuntu/git-pull.log 2>&1' \;
-  find /home/ubuntu/ComfyUI/custom_nodes -maxdepth 1 -type d -exec sh -c 'cd {}
+  find /home/ubuntu/ComfyUI/custom_nodes -maxdepth 1 -type d -exec sh -c 'cd {} && git rev-parse --is-inside-work-tree > /dev/null 2>&1 && git pull >> /home/ubuntu/git-pull.log 2>&1' \;
