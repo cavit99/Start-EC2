@@ -471,12 +471,28 @@ def cleanup(port_forwarding_process, shell_session_process, ssm, instance_id):
             shell_session_process.terminate()  # Terminate the shell session process
     except Exception as e:
         logging.error(f"Error terminating shell session: {e}")
+    finally:
+        if instance_id:
+            try:
+                logging.info("Terminating SSM sessions...")
+                response = ssm.describe_sessions(
+                    State='Active', Filters=[{'key': 'Target', 'value': instance_id}]
+                )
+                sessions = response.get('Sessions', [])
+                for session in sessions:
+                    ssm.terminate_session(SessionId=session['SessionId'])
+                    logging.info(f"Terminated SSM session {session['SessionId']}")
+            except Exception as e:
+                logging.error(f"Failed to terminate SSM sessions: {e}")
+
+        logging.info("Script execution finished.")
 
 def main() -> None:
     # Initialize the shell and port forwarding processes to None
     shell_session_process = None
     port_forwarding_process = None
     instance_id = None  # Initialize instance_id to None
+
     try:
         session = get_aws_session()
         if session is None:
