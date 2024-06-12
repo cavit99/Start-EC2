@@ -1,8 +1,16 @@
-template: 'lt-0e096fddfc03f20b6' #put your aws launch template ID
 remote_port: '8188' #leave empty to disable port fowarding
 local_port: '8188' #leave empty to disable port fowarding
 region: 'eu-north-1' 
-tag_value: 'sd'  #note this key 'value', NOT key 'name'
+availability_zone: 'eu-north-1c'
+ami: 'ami-00ca6e75d45510046'
+instance_type: 'g5.4xlarge'
+key_name: 'sd-north'
+security_groups: 
+  - 'sg-0a2f9548b660b5d0a'
+tag_key: 'sd' 
+tag_value: 'sd'
+iam_instance_profile: 'arn:aws:iam::702712055786:instance-profile/aws-ssm-agent-for-sd'
+max_spot_price: "0.7"
 user_data: |
   #!/bin/bash
   # Define an array of directories
@@ -21,6 +29,6 @@ user_data: |
           fi
       fi
   done
-  # Pull updates for extensions and custom nodes
+  # Pull updates for extensions and custom nodes:
   find /home/ubuntu/stable-diffusion-webui/extensions -maxdepth 1 -type d -exec sh -c 'cd {} && git rev-parse --is-inside-work-tree > /dev/null 2>&1 && git pull >> /home/ubuntu/git-pull.log 2>&1' \;
   find /home/ubuntu/ComfyUI/custom_nodes -maxdepth 1 -type d -exec sh -c 'cd {} && git rev-parse --is-inside-work-tree > /dev/null 2>&1 && git pull >> /home/ubuntu/git-pull.log 2>&1' \;

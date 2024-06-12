@@ -4,7 +4,6 @@
 import boto3
 import logging
 import sys
-import requests
 import yaml
 import subprocess
 import time
@@ -12,6 +11,9 @@ import shutil
 import botocore.config
 import threading
 import requests
+import base64
+import traceback
+import socket
 
 from botocore.exceptions import NoCredentialsError, ClientError
 
@@ -29,120 +31,133 @@ logging.basicConfig(
 try:
     with open('config.yaml', 'r') as f:
         config = yaml.safe_load(f)
-        user_data = config['user_data']
+        user_data = base64.b64encode(config['user_data'].encode()).decode()
 except FileNotFoundError:
     logging.error("Configuration file not found. Please ensure 'config.yaml' exists.")
     raise SystemExit("Exiting due to missing configuration file.")
 
 # Use the configuration values
-LAUNCH_TEMPLATE_ID = config['template']
 REMOTE_PORT_NUMBER = config['remote_port']
 LOCAL_PORT_NUMBER = config['local_port']
 aws_region = config['region']
+aws_key_name = config['key_name']
+aws_ami = config['ami']
+aws_availability_zone = config['availability_zone']
+aws_tag_key = config['tag_key']
 aws_tag_value = config['tag_value']
-
-# Log the configuration values for debugging purposes
-logging.info(f"Using Launch Template ID: {LAUNCH_TEMPLATE_ID}")
-logging.info(f"Using Remote Port Number: {REMOTE_PORT_NUMBER}")
-logging.info(f"Using Local Port Number: {LOCAL_PORT_NUMBER}")
-logging.info(f"Using AWS region: {aws_region}")
-logging.info(f"Using AWS tag value: {aws_tag_value}")
+aws_iam_instance_profile = config['iam_instance_profile']
+aws_instance_type = config['instance_type']
+aws_availability_zone = config['availability_zone']
+aws_security_groups = config['security_groups']
+aws_max_spot_price = config['max_spot_price']
 
 # Ask for user confirmation before proceeding
-confirmation = input("Press Enter to continue or type q to exit: ")
-if confirmation:
-    logging.info("Exiting...")
-    raise SystemExit("User chose to exit.")
+#confirmation = input("Press Enter to continue or type q to exit: ")
+#if confirmation:
+#    logging.info("Exiting...")
+#    raise SystemExit("User chose to exit.")
 
 ready_event = threading.Event()
 
-def get_instance_metadata():
-    base_url = "http://169.254.169.254/latest/meta-data/"
-    instance_type = requests.get(base_url + "instance-type").text
-    availability_zone = requests.get(base_url + "placement/availability-zone").text
-    return instance_type, availability_zone
 
-def get_spot_price(ec2_client):
-    instance_type, availability_zone = get_instance_metadata()
-    response = ec2_client.describe_spot_price_history(
-        InstanceTypes=[instance_type],
-        ProductDescriptions=['Linux/UNIX'],
-        AvailabilityZone=availability_zone,
-        MaxResults=1
-    )
-
-    for spot_price in response['SpotPriceHistory']:
-        logging.info(f"Current spot price for {instance_type} in {availability_zone}: {spot_price['SpotPrice']}")
-        return spot_price['SpotPrice']
-
-def is_connected():
+def is_connected(host="8.8.8.8", port=53, timeout=3):
+    """
+    Check if the internet connection is available by attempting to connect to a DNS server.
+    
+    Args:
+        host (str): The host to connect to. Default is Google's public DNS server.
+        port (int): The port to connect to. Default is 53.
+        timeout (int): The timeout for the connection attempt in seconds. Default is 3 seconds.
+    
+    Returns:
+        bool: True if the connection is successful, False otherwise.
+    """
     try:
-        requests.get('http://www.google.com', timeout=5)
+        socket.setdefaulttimeout(timeout)
+        socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect((host, port))
         return True
-    except requests.exceptions.RequestException:
+    except socket.error:
         return False
 
-def does_launch_template_exist(ec2_client, launch_template_id: str) -> bool:
+ec2_client = boto3.client('ec2')
+
+# Create a new instance 
+def create_spot_instance_request(ec2_client) -> dict:
     try:
-        response = ec2_client.describe_launch_templates(
-            LaunchTemplateIds=[launch_template_id]
-        )
-        return bool(response['LaunchTemplates'])
-    except ClientError as e:
-        error_code = e.response['Error']['Code']
-        if error_code == 'InvalidLaunchTemplateId.NotFound':
-            logging.error(f"Launch template {launch_template_id} does not exist: {e}")
-        elif error_code == 'InvalidLaunchTemplateId.Malformed':
-            logging.error(f"The launch template ID {launch_template_id} is malformed: {e}")
-        else:
-            logging.error(f"An unexpected error occurred: {e}")
-        return False
-    except Exception as e:
-        logging.error(f"An error occurred: {e}")
-        return False
-
-# Create a new instance using the specified launch template
-def run_instance(ec2_resource, ec2_client, launch_template_id: str) -> str:
-    logging.info("Creating a new instance...")
-
-    try:
-        instance = ec2_resource.create_instances(
-            LaunchTemplate={'LaunchTemplateId': launch_template_id},
-            MaxCount=1,
-            MinCount=1,
-            UserData=user_data
+        response = ec2_client.request_spot_instances(
+            SpotPrice=aws_max_spot_price,
+            InstanceCount=1,
+            Type="one-time",
+            LaunchSpecification={
+                'ImageId': aws_ami,
+                'KeyName': aws_key_name,
+                'SecurityGroupIds': aws_security_groups,
+                'InstanceType': aws_instance_type,
+                'Placement': {
+                    'AvailabilityZone': aws_availability_zone,
+                },
+                'IamInstanceProfile': {
+                    'Arn': aws_iam_instance_profile
+                },
+            }
         )[0]
-    except botocore.exceptions.ClientError as e:
-        if e.response['Error']['Code'] == 'InvalidLaunchTemplateId.NotFound':
-            logging.error(f"Launch template {launch_template_id} does not exist: {e}")
-            return None
-        else:
-            logging.error(f"An unexpected error occurred: {e}")
-            return None
+        return response
+    except ClientError as e:
+        logging.error(f"An AWS client error occurred while creating the instance: {e}")
+        logging.error(traceback.format_exc()) 
+        raise
+    except Exception as e:
+        logging.error(f"An error occurred while creating the instance: {e}")
+        logging.error(traceback.format_exc())  
+        raise
 
-    logging.info(f"Waiting for instance {instance.id} to start...")
-    instance.wait_until_running()
-    logging.info(f"Instance {instance.id} is now running. Waiting for initialization...")
-    
-    waiter = ec2_client.get_waiter('instance_status_ok')
-    waiter.wait(InstanceIds=[instance.id])
-    logging.info(f"Instance {instance.id} has passed status checks.")
-    
-    waiter = ec2_client.get_waiter('system_status_ok')
-    waiter.wait(InstanceIds=[instance.id])
-    logging.info(f"System on instance {instance.id} has passed status checks.")
-    
-    return instance.id
+def add_tags_to_instance(ec2_client, instance_id: str):
+    try:
+        ec2_client.create_tags(
+            Resources=[instance_id],
+            Tags=[
+                {
+                    'Key': aws_tag_key,
+                    'Value': aws_tag_value
+                },
+            ]
+        )
+        logging.info(f"Tags successfully added to the instance {instance_id}")
+    except ClientError as e:
+        logging.error(f"Failed to add tags to the instance {instance_id}: {e}")
+        raise
 
-def get_instance_id_by_tag(ec2_resource, name_tag: str) -> str:
+def wait_for_instance_status_ok(ec2_client, instance_id: str):
+    try:
+        waiter = ec2_client.get_waiter('instance_status_ok')
+        waiter.wait(InstanceIds=[instance_id])
+        logging.info(f"Instance {instance_id} has passed status checks.")
+    except ClientError as e:
+        logging.error(f"An AWS client error occurred while waiting for the instance status: {e}")
+        raise
+
+def run_instance(ec2_client) -> str:
+    logging.info("Creating a new instance...")
+    try:
+        response = create_spot_instance_request(ec2_client)
+        instance_id = response['SpotInstanceRequests'][0]['InstanceId']
+        add_tags_to_instance(ec2_client, instance_id)
+        wait_for_instance_status_ok(ec2_client, instance_id)
+        return instance_id
+    except Exception as e:
+        logging.error(f"An error occurred while running the instance: {e}")
+        logging.error(traceback.format_exc())  # Add this line
+        return None
+    
+def get_instance_id_by_tag(ec2_resource, tag_key: str, tag_value: str) -> str:
     instances = ec2_resource.instances.filter(
         Filters=[
-            {'Name': 'tag:Name', 'Values': [name_tag]},
+            {'Name': f'tag:{tag_key}', 'Values': [tag_value]},
             {'Name': 'instance-state-name', 'Values': ['pending', 'running', 'stopping', 'stopped']}
         ])
     for instance in instances:
         return instance.id
-    logging.info(f"No instances with tag value '{name_tag}' found.")
+    logging.info(f"No instances with tag key '{tag_key}' and value '{tag_value}' found.")
     return ""
 
 def wait_for_instance(ec2_client, instance_id: str, status_type: str) -> None:
@@ -270,7 +285,7 @@ def is_ssm_agent_configured(ssm, instance_id: str) -> bool:
         logging.error(f"ClientError occurred while checking SSM agent configuration: {e}")
         raise
 
-def start_ssm_shell_session(ssm, instance_id: str, aws_region: str) -> subprocess.Popen:
+def start_ssm_shell_session(instance_id: str, aws_region: str) -> subprocess.Popen:
     logging.info("Attempting to start an SSM shell session...")
     shell_session_command = [
         "aws", "ssm", "start-session",
@@ -313,7 +328,7 @@ def handle_output(process, ready_event):
         logging.error("Terminating the port forwarding session due to the error.")
         process.terminate()
 
-def start_ssm_port_forwarding_session(ssm, instance_id: str, aws_region: str, remote_port: str, local_port: str) -> subprocess.Popen:
+def start_ssm_port_forwarding_session(instance_id: str, aws_region: str, remote_port: str, local_port: str) -> subprocess.Popen:
     logging.info("Attempting to start an SSM port forwarding session in the background...")
     port_forwarding_command = [
         "aws", "ssm", "start-session",
@@ -394,13 +409,8 @@ def get_ec2_resources(session, aws_region):
 
     return ec2_resource, ec2_client, ssm
 
-def get_instance(ec2_resource, ec2_client, launch_template_id, aws_tag_value):
-    if not does_launch_template_exist(ec2_client, launch_template_id):
-        logging.error(f"Launch template {launch_template_id} does not exist. Exiting.")
-        return None
-
-    existing_instance_id = get_instance_id_by_tag(ec2_resource, aws_tag_value)
-
+def get_instance(ec2_resource, ec2_client, aws_tag_value):
+    existing_instance_id = get_instance_id_by_tag(ec2_resource, aws_tag_key, aws_tag_value)
     if existing_instance_id:
         logging.info(f"An instance with tag value '{aws_tag_value}' exists. Instance ID: {existing_instance_id}")
         try:
@@ -414,7 +424,7 @@ def get_instance(ec2_resource, ec2_client, launch_template_id, aws_tag_value):
         instance_id = existing_instance_id
     else:
         try:
-            instance_id = run_instance(ec2_resource, ec2_client, launch_template_id)
+            instance_id = run_instance(ec2_client)  # Only pass ec2_client
         except ClientError as e:
             if 'UnauthorizedOperation' in str(e):
                 logging.error("You do not have the necessary permissions to create instances. Please check your IAM policies.")
@@ -466,6 +476,7 @@ def main() -> None:
     # Initialize the shell and port forwarding processes to None
     shell_session_process = None
     port_forwarding_process = None
+    instance_id = None  # Initialize instance_id to None
     try:
         session = get_aws_session()
         if session is None:
@@ -473,27 +484,13 @@ def main() -> None:
         
         ec2_resource, ec2_client, ssm = get_ec2_resources(session, aws_region)
         
-        try:
-            spot_price = get_spot_price(ec2_client)
-        except Exception as e:
-            logging.error(f"An error occurred while getting the spot price: {e}")
-            raise SystemExit("An error occurred while getting the spot price.") 
-
-        try:
-            confirmation = input(f"The current spot price is {spot_price}. Do you want to continue? (yes/no): ")
-        except Exception as e:
-            logging.error(f"An error occurred while getting user confirmation: {e}")
-            raise SystemExit("An error occurred while getting user confirmation.") 
-
-        if confirmation.lower() != 'yes':
-            logging.info("User chose not to continue due to the spot price. Exiting...")
-            raise SystemExit("User chose to exit.") 
-        
-        instance_id = get_instance(ec2_resource, ec2_client, LAUNCH_TEMPLATE_ID, aws_tag_value)
+        instance_id = get_instance(ec2_resource, ec2_client, aws_tag_value)
         if instance_id is None:
+            logging.error("Failed to get instance. Exiting.")
             return
 
         # Start the SSM sessions
+        logging.info("Starting SSM sessions")
         shell_session_process, port_forwarding_process = start_ssm_sessions(ssm, instance_id, aws_region)
         if shell_session_process is None:
             return
@@ -529,6 +526,7 @@ def main() -> None:
     # If an unexpected error occurs, log the error
     except Exception as e:
         logging.error(f"An unexpected error occurred in main: {e}")
+        logging.error(traceback.format_exc()) 
         
     # Regardless of how the script exits, clean up the resources
     finally:
